@@ -64,6 +64,7 @@ npm run build
 4. Email pomocy: Twój email.
 5. Dodaj zakresy:
 - `https://www.googleapis.com/auth/spreadsheets`
+- `https://www.googleapis.com/auth/drive.metadata.readonly`
 - `https://www.googleapis.com/auth/drive.file`
 - `https://www.googleapis.com/auth/calendar.events`
 6. Dodaj użytkowników testowych (2 adresy):
@@ -242,6 +243,7 @@ Potem wróć do Google Cloud i upewnij się, że Authorized JS origin i Redirect
 
 - Zweryfikuj `_Config` i strukturę folderów Drive.
 - Nazwy folderów muszą być dokładne (`cover-letters`, nie `cover_letters`).
+- Upewnij się, że aplikacja ma scope `https://www.googleapis.com/auth/drive.metadata.readonly` oraz że ponownie zalogowano użytkownika po zmianie scope.
 
 ### Błąd: `Brak dostępu do arkusza`
 
