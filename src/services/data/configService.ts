@@ -23,8 +23,11 @@ export async function fetchConfigValues(accessToken: string): Promise<ConfigValu
   const config: ConfigValues = {}
   for (let index = 1; index < rows.length; index += 1) {
     const [key, value] = rows[index] ?? []
-    if (key && value) {
-      config[key] = value
+    const normalizedKey = key?.trim()
+    const normalizedValue = value?.trim()
+
+    if (normalizedKey && normalizedValue) {
+      config[normalizedKey] = normalizedValue
     }
   }
 
