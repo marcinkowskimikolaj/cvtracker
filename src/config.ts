@@ -1,5 +1,6 @@
 export const APP_CONFIG = {
   oauthClientId: '78634531969-n4r32vmnr26pquifnudnrnqfqfevd4v8.apps.googleusercontent.com',
+  // Uzupełnij rzeczywistym ID arkusza Google Sheets.
   configSpreadsheetId: 'REPLACE_WITH_CONFIG_SPREADSHEET_ID',
   allowedEmails: ['mikolo321@gmail.com', 'aemilka@gmail.com'],
   githubPagesBase: '/cvtracker/',
