@@ -1,7 +1,7 @@
 export const APP_CONFIG = {
-  oauthClientId: 'REPLACE_WITH_OAUTH_CLIENT_ID.apps.googleusercontent.com',
+  oauthClientId: '78634531969-n4r32vmnr26pquifnudnrnqfqfevd4v8.apps.googleusercontent.com',
   configSpreadsheetId: 'REPLACE_WITH_CONFIG_SPREADSHEET_ID',
-  allowedEmails: ['mikolaj@example.com', 'emilka@example.com'],
+  allowedEmails: ['mikolo321@gmail.com', 'aemilka@gmail.com'],
   githubPagesBase: '/cvtracker/',
   oauthScopes: [
     'openid',
