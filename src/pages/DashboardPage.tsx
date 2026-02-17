@@ -1,10 +1,136 @@
+import { eachWeekOfInterval, endOfWeek, parseISO, startOfWeek } from 'date-fns'
+import { useMemo, useState } from 'react'
+import { ApplicationsOverTimeChart } from '../components/dashboard/ApplicationsOverTimeChart'
+import { AvgResponseTime } from '../components/dashboard/AvgResponseTime'
+import { ConversionFunnel } from '../components/dashboard/ConversionFunnel'
+import { CvEffectivenessChart } from '../components/dashboard/CvEffectivenessChart'
+import { StatsCards } from '../components/dashboard/StatsCards'
+import { StatusDistributionChart } from '../components/dashboard/StatusDistributionChart'
+import { UpcomingEvents } from '../components/dashboard/UpcomingEvents'
+import { useApplications } from '../hooks/useApplications'
+import { useFiles } from '../hooks/useFiles'
+import { useStats } from '../hooks/useStats'
+import { computeDashboardMetrics } from '../services/data/statsService'
+import { STATUS_LABELS } from '../utils/constants'
+import { nowIsoDate } from '../utils/dates'
+
+function weekLabel(date: Date): string {
+  const weekStart = startOfWeek(date, { weekStartsOn: 1 })
+  const weekEnd = endOfWeek(date, { weekStartsOn: 1 })
+  return `${weekStart.toISOString().slice(5, 10)} - ${weekEnd.toISOString().slice(5, 10)}`
+}
+
 export function DashboardPage() {
+  const { applications, appFiles } = useApplications()
+  const { files } = useFiles()
+  const { cvEffectiveness, upcoming } = useStats()
+
+  const [fromDate, setFromDate] = useState('')
+  const [toDate, setToDate] = useState(nowIsoDate())
+
+  const filteredApplications = useMemo(() => {
+    return applications.filter((application) => {
+      if (fromDate && application.applied_date < fromDate) {
+        return false
+      }
+
+      if (toDate && application.applied_date > toDate) {
+        return false
+      }
+
+      return true
+    })
+  }, [applications, fromDate, toDate])
+
+  const metrics = useMemo(() => computeDashboardMetrics(filteredApplications), [filteredApplications])
+
+  const overTimeData = useMemo(() => {
+    if (filteredApplications.length === 0) {
+      return []
+    }
+
+    const dates = filteredApplications.map((application) => parseISO(application.applied_date))
+    const start = new Date(Math.min(...dates.map((date) => date.getTime())))
+    const end = new Date(Math.max(...dates.map((date) => date.getTime())))
+    const weeks = eachWeekOfInterval({ start, end }, { weekStartsOn: 1 })
+
+    return weeks.map((week) => {
+      const label = weekLabel(week)
+      const count = filteredApplications.filter((application) => weekLabel(parseISO(application.applied_date)) === label).length
+
+      return {
+        week: label,
+        count,
+      }
+    })
+  }, [filteredApplications])
+
+  const statusData = useMemo(() => {
+    const rows = Object.entries(STATUS_LABELS).map(([status, label]) => ({
+      name: label,
+      value: filteredApplications.filter((application) => application.status === status).length,
+      color:
+        status === 'sent'
+          ? '#8C919D'
+          : status === 'interview'
+            ? '#3B6FD4'
+            : status === 'waiting'
+              ? '#D4900A'
+              : status === 'offer'
+                ? '#1D8A56'
+                : '#C93B3B',
+    }))
+
+    return rows
+  }, [filteredApplications])
+
+  const funnel = useMemo(() => {
+    const sent = filteredApplications.length
+    const interview = filteredApplications.filter((application) => application.status === 'interview').length
+    const offer = filteredApplications.filter((application) => application.status === 'offer').length
+
+    return { sent, interview, offer }
+  }, [filteredApplications])
+
+  const cvData = useMemo(() => {
+    return cvEffectiveness.map((item) => {
+      const usageCount = appFiles.filter((link) => link.file_id === item.fileId).length
+      const file = files.find((entry) => entry.file_id === item.fileId)
+
+      return {
+        ...item,
+        fileName: file?.file_name || item.fileName,
+        usageCount,
+      }
+    })
+  }, [appFiles, cvEffectiveness, files])
+
   return (
-    <section className="cv-card page-enter">
-      <h1 style={{ fontSize: '1.75rem', fontWeight: 600, marginBottom: 8 }}>Dashboard</h1>
-      <p style={{ color: 'var(--text-secondary)' }}>
-        Fundament gotowy. Statystyki i wykresy zostaną wdrożone w Fazie 5.
-      </p>
+    <section className="page-enter" style={{ display: 'grid', gap: 16 }}>
+      <section className="cv-card">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div>
+            <h1 style={{ fontSize: '1.75rem', fontWeight: 600 }}>Dashboard</h1>
+            <p style={{ color: 'var(--text-secondary)' }}>Przegląd statystyk i trendów rekrutacyjnych.</p>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <input className="cv-input" type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} />
+            <input className="cv-input" type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} />
+          </div>
+        </div>
+      </section>
+
+      <StatsCards metrics={metrics} />
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 16 }}>
+        <CvEffectivenessChart data={cvData} />
+        <AvgResponseTime avgDays={metrics.avgResponseDays} />
+        <StatusDistributionChart data={statusData} />
+        <ApplicationsOverTimeChart data={overTimeData} />
+        <ConversionFunnel sent={funnel.sent} interview={funnel.interview} offer={funnel.offer} />
+        <UpcomingEvents events={upcoming} />
+      </div>
     </section>
   )
 }
