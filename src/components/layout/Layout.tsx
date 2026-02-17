@@ -13,7 +13,7 @@ export function Layout() {
   const openSearch = useSearchStore((state) => state.open)
 
   return (
-    <div>
+    <div className="cv-premium-app">
       <Sidebar />
       <Topbar
         onOpenSearch={openSearch}
@@ -21,22 +21,18 @@ export function Layout() {
         isRefreshing={isRefreshing}
         lastSyncAt={lastSyncAt}
       />
-      <main
-        style={{
-          marginLeft: 'var(--sidebar-width)',
-          padding: 'calc(var(--topbar-height) + 20px) var(--content-padding) var(--content-padding)',
-          minHeight: '100vh',
-        }}
-      >
-        {driveValidation && driveValidation.missingFolders.length > 0 ? (
-          <div className="cv-toast" style={{ marginBottom: 16 }}>
-            <span>
-              Brakuje folderów na Google Drive: {driveValidation.missingFolders.join(', ')}.
-            </span>
-          </div>
-        ) : null}
-        <Outlet />
+
+      <main className="cv-premium-content">
+        <div className="cv-premium-content-inner page-enter">
+          {driveValidation && driveValidation.missingFolders.length > 0 ? (
+            <div className="cv-toast cv-premium-drive-alert" style={{ marginBottom: 14 }}>
+              <span>Brakuje folderów na Google Drive: {driveValidation.missingFolders.join(', ')}.</span>
+            </div>
+          ) : null}
+          <Outlet />
+        </div>
       </main>
+
       <SearchPalette />
     </div>
   )

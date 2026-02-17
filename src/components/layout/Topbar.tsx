@@ -17,21 +17,22 @@ export function Topbar({ onOpenSearch, onRefresh, isRefreshing, lastSyncAt }: To
   const { activeProfile } = useProfile()
 
   const profileLabel = PROFILE_OPTIONS.find((profile) => profile.id === activeProfile)?.label ?? 'Profil'
+  const avatarClass = activeProfile === 'emilka' ? 'cv-avatar cv-avatar-emilka' : 'cv-avatar cv-avatar-mikolaj'
 
   return (
-    <header className="cv-topbar">
-      <div>
-        <p style={{ fontSize: '0.8125rem', color: 'var(--text-tertiary)' }}>Aktywny profil</p>
-        <h2 style={{ fontSize: '1.125rem', fontWeight: 600 }}>{profileLabel}</h2>
-        <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
-          Ostatnia synchronizacja: {lastSyncAt ? formatDateTime(lastSyncAt) : '-'}
-        </p>
+    <header className="cv-topbar cv-premium-topbar">
+      <div className="cv-premium-topbar-left">
+        <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Centrum pracy</p>
+        <h2 style={{ fontSize: '1.125rem', fontWeight: 600 }}>Profil: {profileLabel}</h2>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button className="cv-btn cv-btn-secondary cv-btn-pill" type="button" onClick={onOpenSearch}>
-          <Search size={16} />
-          <span>Szukaj (Ctrl+K)</span>
+      <div className="cv-premium-topbar-right">
+        <button className="cv-btn cv-premium-topbar-search" type="button" onClick={onOpenSearch}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <Search size={15} />
+            <span>Wyszukaj firmę, aplikację lub plik</span>
+          </span>
+          <kbd>Ctrl+K</kbd>
         </button>
 
         <button
@@ -39,14 +40,15 @@ export function Topbar({ onOpenSearch, onRefresh, isRefreshing, lastSyncAt }: To
           type="button"
           onClick={onRefresh}
           disabled={isRefreshing}
+          title={lastSyncAt ? `Ostatnia synchronizacja: ${formatDateTime(lastSyncAt)}` : 'Brak synchronizacji'}
         >
           <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
-          <span>{isRefreshing ? 'Odświeżanie...' : 'Odśwież dane'}</span>
+          <span>{isRefreshing ? 'Odświeżanie...' : 'Odśwież'}</span>
         </button>
 
         <ProfileSwitcher />
 
-        <div className="cv-avatar cv-avatar-mikolaj" title={user?.email}>
+        <div className={avatarClass} title={user?.email}>
           {user?.name?.slice(0, 1) ?? 'U'}
         </div>
 

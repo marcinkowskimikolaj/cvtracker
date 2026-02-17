@@ -17,27 +17,47 @@ export function ConversionFunnel({ sent, interview, offer }: ConversionFunnelPro
   const offerPct = percent(offer, sent)
 
   return (
-    <section className="cv-card-sm" style={{ display: 'grid', gap: 12 }}>
-      <h3 style={{ fontSize: '1.125rem', fontWeight: 600 }}>Lejek konwersji</h3>
-
-      <div className="cv-card-nested">
-        <p>Wysłano: {sent}</p>
-        <div className="cv-progress-bars">
-          <span className="cv-progress-bar cv-progress-bar-active" style={{ height: 32, width: '100%' }} />
+    <section className="cv-card cv-premium-chart-card">
+      <div className="cv-premium-chart-header">
+        <div>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Lejek konwersji</h3>
+          <p className="cv-premium-caption">Przejście od wysłanych aplikacji do ofert.</p>
         </div>
       </div>
 
-      <div className="cv-card-nested">
-        <p>Rozmowa: {interview} ({interviewPct}%)</p>
-        <div className="cv-progress-bars">
-          <span className="cv-progress-bar cv-progress-bar-active" style={{ height: 24, width: `${Math.max(interviewPct, 2)}%` }} />
+      <div className="cv-premium-funnel">
+        <div className="cv-premium-funnel-row">
+          <div className="cv-premium-funnel-row-top">
+            <span>Wysłano</span>
+            <strong>{sent}</strong>
+          </div>
+          <div className="cv-premium-funnel-track">
+            <span style={{ width: '100%' }} />
+          </div>
         </div>
-      </div>
 
-      <div className="cv-card-nested">
-        <p>Oferta: {offer} ({offerPct}%)</p>
-        <div className="cv-progress-bars">
-          <span className="cv-progress-bar cv-progress-bar-active" style={{ height: 16, width: `${Math.max(offerPct, 2)}%` }} />
+        <div className="cv-premium-funnel-row">
+          <div className="cv-premium-funnel-row-top">
+            <span>Rozmowy</span>
+            <strong>
+              {interview} ({interviewPct}%)
+            </strong>
+          </div>
+          <div className="cv-premium-funnel-track">
+            <span style={{ width: `${Math.max(interviewPct, 2)}%` }} />
+          </div>
+        </div>
+
+        <div className="cv-premium-funnel-row">
+          <div className="cv-premium-funnel-row-top">
+            <span>Oferty</span>
+            <strong>
+              {offer} ({offerPct}%)
+            </strong>
+          </div>
+          <div className="cv-premium-funnel-track">
+            <span style={{ width: `${Math.max(offerPct, 2)}%` }} />
+          </div>
         </div>
       </div>
     </section>

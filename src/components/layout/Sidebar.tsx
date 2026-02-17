@@ -4,9 +4,12 @@ import {
   CalendarDays,
   FolderOpen,
   LayoutDashboard,
+  Sparkles,
   Users,
 } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
+import { useProfile } from '../../hooks/useProfile'
+import { PROFILE_OPTIONS } from '../../utils/constants'
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -18,13 +21,22 @@ const navItems = [
 ]
 
 export function Sidebar() {
+  const { activeProfile } = useProfile()
+  const profileLabel = PROFILE_OPTIONS.find((profile) => profile.id === activeProfile)?.label ?? 'Profil'
+
   return (
-    <aside className="cv-sidebar">
-      <div style={{ padding: '20px 16px', marginBottom: 8 }}>
-        <h1 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-primary)' }}>CV Tracker</h1>
+    <aside className="cv-sidebar cv-premium-sidebar">
+      <div className="cv-premium-brand">
+        <div className="cv-premium-brand-icon" aria-hidden="true">
+          <Sparkles size={18} />
+        </div>
+        <div>
+          <p className="cv-premium-brand-title">CV Tracker</p>
+          <p className="cv-premium-brand-subtitle">Panel rekrutacji</p>
+        </div>
       </div>
 
-      <nav style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <nav className="cv-premium-nav">
         {navItems.map((item) => {
           const Icon = item.icon
           return (
@@ -35,12 +47,19 @@ export function Sidebar() {
                 `cv-sidebar-nav-item${isActive ? ' cv-sidebar-nav-item-active' : ''}`
               }
             >
-              <Icon size={20} />
+              <Icon size={19} />
               <span>{item.label}</span>
             </NavLink>
           )
         })}
       </nav>
+
+      <div className="cv-premium-sidebar-footer">
+        <div className="cv-card-nested">
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Aktywny profil</p>
+          <p style={{ fontWeight: 600 }}>{profileLabel}</p>
+        </div>
+      </div>
     </aside>
   )
 }
