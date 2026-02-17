@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react'
+import { Suspense, lazy, type ComponentType } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { ToastViewport } from './components/common/ToastViewport'
 import { Layout } from './components/layout/Layout'
@@ -6,21 +6,72 @@ import { useAuth } from './hooks/useAuth'
 import { useDataBootstrap } from './hooks/useDataBootstrap'
 import { LoginPage } from './pages/LoginPage'
 
-const DashboardPage = lazy(() => import('./pages/DashboardPage').then((module) => ({ default: module.DashboardPage })))
-const ApplicationsPage = lazy(() => import('./pages/ApplicationsPage').then((module) => ({ default: module.ApplicationsPage })))
-const ApplicationDetailPage = lazy(() =>
+const CHUNK_RELOAD_SESSION_KEY = 'cvtracker_chunk_reload_attempted'
+
+function isChunkLoadError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false
+  }
+
+  const message = error.message.toLowerCase()
+  return (
+    message.includes('failed to fetch dynamically imported module') ||
+    message.includes('error loading dynamically imported module') ||
+    message.includes('importing a module script failed')
+  )
+}
+
+function reloadWithCacheBuster(): boolean {
+  if (typeof window === 'undefined') {
+    return false
+  }
+
+  if (window.sessionStorage.getItem(CHUNK_RELOAD_SESSION_KEY) === '1') {
+    return false
+  }
+
+  window.sessionStorage.setItem(CHUNK_RELOAD_SESSION_KEY, '1')
+  const url = new URL(window.location.href)
+  url.searchParams.set('reload', Date.now().toString())
+  window.location.replace(url.toString())
+  return true
+}
+
+function lazyWithRetry<T extends ComponentType<unknown>>(
+  importer: () => Promise<{ default: T }>,
+) {
+  return lazy(async () => {
+    try {
+      const module = await importer()
+      if (typeof window !== 'undefined') {
+        window.sessionStorage.removeItem(CHUNK_RELOAD_SESSION_KEY)
+      }
+      return module
+    } catch (error) {
+      if (isChunkLoadError(error) && reloadWithCacheBuster()) {
+        return new Promise<never>(() => {})
+      }
+
+      throw error
+    }
+  })
+}
+
+const DashboardPage = lazyWithRetry(() => import('./pages/DashboardPage').then((module) => ({ default: module.DashboardPage })))
+const ApplicationsPage = lazyWithRetry(() => import('./pages/ApplicationsPage').then((module) => ({ default: module.ApplicationsPage })))
+const ApplicationDetailPage = lazyWithRetry(() =>
   import('./pages/ApplicationDetailPage').then((module) => ({ default: module.ApplicationDetailPage })),
 )
-const CompaniesPage = lazy(() => import('./pages/CompaniesPage').then((module) => ({ default: module.CompaniesPage })))
-const CompanyDetailPage = lazy(() =>
+const CompaniesPage = lazyWithRetry(() => import('./pages/CompaniesPage').then((module) => ({ default: module.CompaniesPage })))
+const CompanyDetailPage = lazyWithRetry(() =>
   import('./pages/CompanyDetailPage').then((module) => ({ default: module.CompanyDetailPage })),
 )
-const RecruitersPage = lazy(() => import('./pages/RecruitersPage').then((module) => ({ default: module.RecruitersPage })))
-const RecruiterDetailPage = lazy(() =>
+const RecruitersPage = lazyWithRetry(() => import('./pages/RecruitersPage').then((module) => ({ default: module.RecruitersPage })))
+const RecruiterDetailPage = lazyWithRetry(() =>
   import('./pages/RecruiterDetailPage').then((module) => ({ default: module.RecruiterDetailPage })),
 )
-const FilesPage = lazy(() => import('./pages/FilesPage').then((module) => ({ default: module.FilesPage })))
-const CalendarPage = lazy(() => import('./pages/CalendarPage').then((module) => ({ default: module.CalendarPage })))
+const FilesPage = lazyWithRetry(() => import('./pages/FilesPage').then((module) => ({ default: module.FilesPage })))
+const CalendarPage = lazyWithRetry(() => import('./pages/CalendarPage').then((module) => ({ default: module.CalendarPage })))
 
 function PageFallback() {
   return (
