@@ -3,6 +3,7 @@ import type { AuthUser } from '../../types'
 
 interface TokenResponse {
   access_token: string
+  expires_in?: number
   error?: string
   error_description?: string
 }
@@ -72,14 +73,20 @@ async function getUserProfile(accessToken: string): Promise<AuthUser> {
   }
 }
 
-export async function login(): Promise<{ accessToken: string; email: string; name: string; picture?: string }> {
+export async function login(): Promise<{
+  accessToken: string
+  email: string
+  name: string
+  picture?: string
+  expiresInSeconds: number
+}> {
   await loadGoogleScript()
 
   if (!window.google?.accounts.oauth2) {
     throw new Error('Google OAuth nie jest dostępny.')
   }
 
-  const token = await new Promise<string>((resolve, reject) => {
+  const tokenResult = await new Promise<{ accessToken: string; expiresInSeconds: number }>((resolve, reject) => {
     const tokenClient = window.google?.accounts.oauth2.initTokenClient({
       client_id: APP_CONFIG.oauthClientId,
       scope: APP_CONFIG.oauthScopes.join(' '),
@@ -94,7 +101,10 @@ export async function login(): Promise<{ accessToken: string; email: string; nam
           return
         }
 
-        resolve(response.access_token)
+        resolve({
+          accessToken: response.access_token,
+          expiresInSeconds: response.expires_in ?? 3600,
+        })
       },
     })
 
@@ -106,13 +116,14 @@ export async function login(): Promise<{ accessToken: string; email: string; nam
     tokenClient.requestAccessToken({ prompt: 'consent' })
   })
 
-  const user = await getUserProfile(token)
+  const user = await getUserProfile(tokenResult.accessToken)
 
   return {
-    accessToken: token,
+    accessToken: tokenResult.accessToken,
     email: user.email,
     name: user.name,
     picture: user.picture,
+    expiresInSeconds: tokenResult.expiresInSeconds,
   }
 }
 

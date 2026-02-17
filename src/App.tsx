@@ -1,4 +1,4 @@
-import { Suspense, lazy, type ComponentType } from 'react'
+import { Suspense, lazy, useEffect, type ComponentType } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { ToastViewport } from './components/common/ToastViewport'
 import { Layout } from './components/layout/Layout'
@@ -171,7 +171,19 @@ function ProtectedApp() {
 }
 
 export default function App() {
-  const { user } = useAuth()
+  const { user, isRestoring, restoreSession } = useAuth()
+
+  useEffect(() => {
+    void restoreSession()
+  }, [restoreSession])
+
+  if (isRestoring) {
+    return (
+      <div style={{ minHeight: '100vh', padding: 24 }}>
+        <PageFallback />
+      </div>
+    )
+  }
 
   return (
     <>
