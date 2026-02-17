@@ -1,9 +1,16 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useApplications } from '../../hooks/useApplications'
 import { useCompanies } from '../../hooks/useCompanies'
-import { useToastStore } from '../../store/toastStore'
-import type { ApplicationStatus, Priority } from '../../types'
+import { useToastStore, type ToastVariant } from '../../store/toastStore'
+import type {
+  AppStepRecord,
+  ApplicationRecord,
+  ApplicationStatus,
+  CompanyRecord,
+  Priority,
+  SheetRecord,
+} from '../../types'
 import { nowIsoDateTime } from '../../utils/dates'
 import { calculateHourlyRate } from '../../utils/salary'
 import { AttachedFiles } from './AttachedFiles'
@@ -17,84 +24,79 @@ interface ApplicationDetailProps {
   appId: string
 }
 
-export function ApplicationDetail({ appId }: ApplicationDetailProps) {
-  const { applications, updateApplication, appSteps, deleteAppStep } = useApplications()
-  const { companies } = useCompanies()
-  const pushToast = useToastStore((state) => state.push)
+interface ApplicationDetailContentProps {
+  app: SheetRecord<ApplicationRecord>
+  company: SheetRecord<CompanyRecord> | undefined
+  appSteps: Array<SheetRecord<AppStepRecord>>
+  updateApplication: (record: SheetRecord<ApplicationRecord>) => Promise<void>
+  deleteAppStep: (rowNumber: number) => Promise<void>
+  pushToast: (toast: { title: string; variant: ToastVariant }) => void
+}
 
-  const app = applications.find((item) => item.app_id === appId)
+function ApplicationDetailContent({
+  app,
+  company,
+  appSteps,
+  updateApplication,
+  deleteAppStep,
+  pushToast,
+}: ApplicationDetailContentProps) {
+  const [roleDescription, setRoleDescription] = useState(app.role_description)
+  const [notes, setNotes] = useState(app.notes)
 
-  const company = useMemo(
-    () => companies.find((item) => item.company_id === app?.company_id),
-    [app?.company_id, companies],
-  )
-
-  const [roleDescription, setRoleDescription] = useState('')
-  const [notes, setNotes] = useState('')
+  const appRef = useRef(app)
 
   useEffect(() => {
-    if (!app) {
-      return
-    }
-
-    setRoleDescription(app.role_description)
-    setNotes(app.notes)
+    appRef.current = app
   }, [app])
 
   useEffect(() => {
-    if (!app || roleDescription === app.role_description) {
+    if (roleDescription === app.role_description) {
       return
     }
 
     const timer = window.setTimeout(() => {
+      const currentApp = appRef.current
       void updateApplication({
-        ...app,
+        ...currentApp,
         role_description: roleDescription,
         updated_at: nowIsoDateTime(),
       })
     }, 2000)
 
     return () => window.clearTimeout(timer)
-  }, [app, roleDescription, updateApplication])
+  }, [app.role_description, roleDescription, updateApplication])
 
   useEffect(() => {
-    if (!app || notes === app.notes) {
+    if (notes === app.notes) {
       return
     }
 
     const timer = window.setTimeout(() => {
+      const currentApp = appRef.current
       void updateApplication({
-        ...app,
+        ...currentApp,
         notes,
         updated_at: nowIsoDateTime(),
       })
     }, 2000)
 
     return () => window.clearTimeout(timer)
-  }, [app, notes, updateApplication])
+  }, [app.notes, notes, updateApplication])
 
-  if (!app) {
-    return (
-      <section className="cv-card page-enter">
-        <h1 style={{ fontSize: '1.75rem', fontWeight: 600 }}>Nie znaleziono aplikacji</h1>
-      </section>
-    )
-  }
-
-  const currentApp = app
-  const steps = appSteps.filter((step) => step.app_id === currentApp.app_id)
+  const steps = appSteps.filter((step) => step.app_id === app.app_id)
 
   async function updateStatus(status: ApplicationStatus): Promise<void> {
-    await updateApplication({ ...currentApp, status, updated_at: nowIsoDateTime() })
+    await updateApplication({ ...appRef.current, status, updated_at: nowIsoDateTime() })
   }
 
   async function updatePriority(priority: Priority): Promise<void> {
-    await updateApplication({ ...currentApp, priority, updated_at: nowIsoDateTime() })
+    await updateApplication({ ...appRef.current, priority, updated_at: nowIsoDateTime() })
   }
 
   async function updateSalary(monthlySalary: number | null): Promise<void> {
     await updateApplication({
-      ...currentApp,
+      ...appRef.current,
       monthly_salary: monthlySalary,
       hourly_rate: calculateHourlyRate(monthlySalary),
       updated_at: nowIsoDateTime(),
@@ -154,17 +156,17 @@ export function ApplicationDetail({ appId }: ApplicationDetailProps) {
         <p style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem' }}>Autozapis po 2 sekundach.</p>
       </section>
 
-      <SalaryCalculator monthlySalary={currentApp.monthly_salary} onMonthlySalaryChange={(value) => void updateSalary(value)} />
+      <SalaryCalculator monthlySalary={app.monthly_salary} onMonthlySalaryChange={(value) => void updateSalary(value)} />
 
       {company ? <CompanyMapSection company={company} /> : null}
 
-      <AttachedFiles app={currentApp} />
-      <AttachedRecruiters app={currentApp} />
+      <AttachedFiles app={app} />
+      <AttachedRecruiters app={app} />
 
       <section className="cv-card-nested" style={{ display: 'grid', gap: 12 }}>
         <h3 style={{ fontSize: '1rem', fontWeight: 600 }}>Kroki rekrutacji</h3>
         <StepTimeline steps={steps} onDelete={(rowNumber) => void handleDeleteStep(rowNumber)} />
-        <StepForm app={currentApp} companyName={company?.name || 'Firma'} />
+        <StepForm app={app} companyName={company?.name || 'Firma'} />
       </section>
 
       <section className="cv-card-nested" style={{ display: 'grid', gap: 8 }}>
@@ -178,5 +180,38 @@ export function ApplicationDetail({ appId }: ApplicationDetailProps) {
         <p style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem' }}>Autozapis po 2 sekundach.</p>
       </section>
     </section>
+  )
+}
+
+export function ApplicationDetail({ appId }: ApplicationDetailProps) {
+  const { applications, updateApplication, appSteps, deleteAppStep } = useApplications()
+  const { companies } = useCompanies()
+  const pushToast = useToastStore((state) => state.push)
+
+  const app = applications.find((item) => item.app_id === appId)
+
+  const company = useMemo(
+    () => companies.find((item) => item.company_id === app?.company_id),
+    [app?.company_id, companies],
+  )
+
+  if (!app) {
+    return (
+      <section className="cv-card page-enter">
+        <h1 style={{ fontSize: '1.75rem', fontWeight: 600 }}>Nie znaleziono aplikacji</h1>
+      </section>
+    )
+  }
+
+  return (
+    <ApplicationDetailContent
+      key={app.app_id}
+      app={app}
+      company={company}
+      appSteps={appSteps}
+      updateApplication={updateApplication}
+      deleteAppStep={deleteAppStep}
+      pushToast={pushToast}
+    />
   )
 }

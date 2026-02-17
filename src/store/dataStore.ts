@@ -228,6 +228,10 @@ export const useDataStore = create<DataStoreState>((set, get) => ({
   appSteps: [],
   calendarEvents: [],
   loadAll: async () => {
+    if (get().isLoading) {
+      return
+    }
+
     set({ isLoading: true, error: null })
 
     try {
@@ -247,6 +251,10 @@ export const useDataStore = create<DataStoreState>((set, get) => ({
     }
   },
   refreshAll: async () => {
+    if (get().isRefreshing) {
+      return
+    }
+
     set({ isRefreshing: true })
 
     try {

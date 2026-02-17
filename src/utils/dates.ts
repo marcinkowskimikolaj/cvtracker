@@ -25,6 +25,10 @@ export function nowIsoDateTime(): string {
   return new Date().toISOString()
 }
 
+export function nowTimestamp(): number {
+  return Date.now()
+}
+
 export function daysBetween(startIso: string, endIso: string): number {
   const start = parseISO(startIso).getTime()
   const end = parseISO(endIso).getTime()

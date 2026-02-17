@@ -1,5 +1,6 @@
 import type { AppStepRecord, SheetRecord } from '../../types'
 import { STEP_TYPE_LABELS } from '../../utils/constants'
+import { nowTimestamp } from '../../utils/dates'
 
 interface StepTimelineProps {
   steps: Array<SheetRecord<AppStepRecord>>
@@ -8,11 +9,12 @@ interface StepTimelineProps {
 
 export function StepTimeline({ steps, onDelete }: StepTimelineProps) {
   const sorted = [...steps].sort((a, b) => `${a.step_date} ${a.step_time}`.localeCompare(`${b.step_date} ${b.step_time}`))
+  const currentTimestamp = nowTimestamp()
 
   return (
     <div className="cv-timeline">
       {sorted.map((step) => {
-        const isFuture = new Date(`${step.step_date}T${step.step_time || '00:00'}:00`).getTime() > Date.now()
+        const isFuture = new Date(`${step.step_date}T${step.step_time || '00:00'}:00`).getTime() > currentTimestamp
 
         return (
           <div key={step.step_id} className="cv-timeline-item">

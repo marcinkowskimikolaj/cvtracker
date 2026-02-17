@@ -1,24 +1,25 @@
 import { useEffect } from 'react'
-import { useAuth } from './useAuth'
-import { useProfile } from './useProfile'
 import { REFRESH_INTERVAL_MS } from '../utils/constants'
 import { useDataStore } from '../store/dataStore'
+import { useAuthStore } from '../store/authStore'
+import { useProfileStore } from '../store/profileStore'
 
 export function useDataBootstrap() {
-  const { user, isConfigLoaded } = useAuth()
-  const { activeProfile } = useProfile()
+  const accessToken = useAuthStore((state) => state.accessToken)
+  const isConfigLoaded = useAuthStore((state) => state.isConfigLoaded)
+  const activeProfile = useProfileStore((state) => state.activeProfile)
   const loadAll = useDataStore((state) => state.loadAll)
 
   useEffect(() => {
-    if (!user || !isConfigLoaded) {
+    if (!accessToken || !isConfigLoaded) {
       return
     }
 
     void loadAll()
-  }, [activeProfile, isConfigLoaded, loadAll, user])
+  }, [accessToken, activeProfile, isConfigLoaded, loadAll])
 
   useEffect(() => {
-    if (!user || !isConfigLoaded) {
+    if (!accessToken || !isConfigLoaded) {
       return
     }
 
@@ -29,5 +30,5 @@ export function useDataBootstrap() {
     return () => {
       window.clearInterval(timer)
     }
-  }, [isConfigLoaded, loadAll, user])
+  }, [accessToken, isConfigLoaded, loadAll])
 }

@@ -7,6 +7,7 @@ import 'react-big-calendar/lib/css/react-big-calendar.css'
 import { useApplications } from '../../hooks/useApplications'
 import { useCalendar } from '../../hooks/useCalendar'
 import type { CalendarEventRecord, EventType, SheetRecord } from '../../types'
+import { nowTimestamp } from '../../utils/dates'
 import { EventForm } from './EventForm'
 import { EventModal } from './EventModal'
 import { SuggestedEvents } from './SuggestedEvents'
@@ -75,6 +76,8 @@ export function CalendarView() {
   const [defaultDate, setDefaultDate] = useState<string | undefined>(undefined)
 
   const events = useMemo<CalendarEventUi[]>(() => {
+    const currentTimestamp = nowTimestamp()
+
     const calendarMapped = calendarEvents.map((event) => {
       const start = new Date(`${event.event_date}T${event.event_time || '00:00'}:00`)
       const end = new Date(start)
@@ -92,7 +95,7 @@ export function CalendarView() {
     })
 
     const futureSteps = appSteps
-      .filter((step) => new Date(`${step.step_date}T${step.step_time || '00:00'}:00`).getTime() > Date.now())
+      .filter((step) => new Date(`${step.step_date}T${step.step_time || '00:00'}:00`).getTime() > currentTimestamp)
       .map((step) => {
         const application = applications.find((item) => item.app_id === step.app_id)
         const start = new Date(`${step.step_date}T${step.step_time || '00:00'}:00`)

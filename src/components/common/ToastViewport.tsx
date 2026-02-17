@@ -14,7 +14,8 @@ function accentColor(variant: 'info' | 'error' | 'success'): string {
 }
 
 export function ToastViewport() {
-  const { toasts, remove } = useToastStore()
+  const toasts = useToastStore((state) => state.toasts)
+  const remove = useToastStore((state) => state.remove)
 
   return (
     <div style={{ position: 'fixed', top: 24, right: 24, zIndex: 100, display: 'grid', gap: 10 }}>
