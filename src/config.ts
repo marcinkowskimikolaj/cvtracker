@@ -11,5 +11,4 @@ export const APP_CONFIG = {
     'https://www.googleapis.com/auth/drive.file',
     'https://www.googleapis.com/auth/calendar.events',
   ],
-} as const
- 
+} as const 
