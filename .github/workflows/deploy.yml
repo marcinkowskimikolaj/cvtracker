@@ -34,7 +34,15 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Configure Pages (auto-enable with PAT)
+        if: ${{ secrets.PAGES_ENABLEMENT_TOKEN != '' }}
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+          token: ${{ secrets.PAGES_ENABLEMENT_TOKEN }}
+
       - name: Configure Pages
+        if: ${{ secrets.PAGES_ENABLEMENT_TOKEN == '' }}
         uses: actions/configure-pages@v5
 
       - name: Upload artifact

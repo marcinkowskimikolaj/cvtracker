@@ -257,3 +257,10 @@ Potem wróć do Google Cloud i upewnij się, że Authorized JS origin i Redirect
 - Sprawdź czy repo to dokładnie `cvtracker`.
 - Sprawdź `base: '/cvtracker/'` w `/Users/mikolajmarcinkowski/Desktop/cvtracker/vite.config.ts`.
 
+### Błąd workflow: `Get Pages site failed` / `Not Found`
+
+- To znaczy, że GitHub Pages nie jest jeszcze włączone dla repo.
+- Wejdź: `GitHub -> repo -> Settings -> Pages`.
+- W sekcji `Build and deployment` ustaw `Source` na `GitHub Actions`.
+- Zapisz i uruchom workflow ponownie (`Actions -> Deploy to GitHub Pages -> Re-run jobs`).
+- Opcjonalnie: ustaw secret repo `PAGES_ENABLEMENT_TOKEN` (PAT z uprawnieniem administracyjnym do repo), wtedy workflow może sam włączyć Pages.
