@@ -1,6 +1,8 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
+import { ToastViewport } from './components/common/ToastViewport'
 import { Layout } from './components/layout/Layout'
 import { useAuth } from './hooks/useAuth'
+import { useDataBootstrap } from './hooks/useDataBootstrap'
 import { ApplicationDetailPage } from './pages/ApplicationDetailPage'
 import { ApplicationsPage } from './pages/ApplicationsPage'
 import { CalendarPage } from './pages/CalendarPage'
@@ -14,6 +16,7 @@ import { RecruitersPage } from './pages/RecruitersPage'
 
 function ProtectedApp() {
   const { user } = useAuth()
+  useDataBootstrap()
 
   if (!user) {
     return <Navigate to="/login" replace />
@@ -41,9 +44,12 @@ export default function App() {
   const { user } = useAuth()
 
   return (
-    <Routes>
-      <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
-      <Route path="/*" element={<ProtectedApp />} />
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
+        <Route path="/*" element={<ProtectedApp />} />
+      </Routes>
+      <ToastViewport />
+    </>
   )
 }

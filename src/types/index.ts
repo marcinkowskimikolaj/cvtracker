@@ -61,6 +61,8 @@ export interface RowMeta {
   __rowNumber: number
 }
 
+export type SheetRecord<T> = T & RowMeta
+
 export interface FileRecord {
   file_id: string
   profile_id: ProfileId
