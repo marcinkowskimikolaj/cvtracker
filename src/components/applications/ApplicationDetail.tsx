@@ -1,10 +1,15 @@
 import {
   ArrowLeft,
   Building2,
-  Calendar as CalendarIcon,
+  CalendarDays,
   Download,
   ExternalLink,
+  Globe,
+  Linkedin,
   Mail,
+  MapPin,
+  Navigation2,
+  Pencil,
   Phone,
   Star,
   XCircle,
@@ -31,11 +36,11 @@ import { STATUS_LABELS, STEP_TYPE_LABELS } from '../../utils/constants'
 import { nowIsoDate, nowIsoDateTime } from '../../utils/dates'
 import { calculateHourlyRate } from '../../utils/salary'
 import { generateId } from '../../utils/uuid'
+import { MapEmbed } from '../common/MapEmbed'
 import { AttachedFiles } from './AttachedFiles'
 import { AttachedRecruiters } from './AttachedRecruiters'
 import { StepForm } from './StepForm'
 import { StepTimeline } from './StepTimeline'
-import { CompanyMapSection } from '../companies/CompanyMapSection'
 
 interface ApplicationDetailProps {
   appId: string
@@ -55,6 +60,23 @@ function statusBadgeClass(status: ApplicationStatus): string {
       return 'cv-badge cv-badge-rejected'
     default:
       return 'cv-badge cv-badge-sent'
+  }
+}
+
+function statusDotColor(status: ApplicationStatus): string {
+  switch (status) {
+    case 'sent':
+      return '#6B7280'
+    case 'interview':
+      return '#3B6FD4'
+    case 'waiting':
+      return '#D4900A'
+    case 'offer':
+      return '#1D8A56'
+    case 'rejected':
+      return '#C93B3B'
+    default:
+      return '#6B7280'
   }
 }
 
@@ -85,6 +107,31 @@ function formatHourlySalary(value: number | null): string {
   return `${new Intl.NumberFormat('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)} PLN`
 }
 
+function externalIconLink(icon: JSX.Element, url: string, title: string) {
+  const isDisabled = !url
+
+  return (
+    <a
+      className="cv-btn cv-btn-ghost cv-btn-icon"
+      href={isDisabled ? undefined : url}
+      target="_blank"
+      rel="noreferrer"
+      title={title}
+      aria-disabled={isDisabled}
+      style={{
+        width: 36,
+        height: 36,
+        borderRadius: 9999,
+        border: '1px solid var(--border-default)',
+        opacity: isDisabled ? 0.35 : 1,
+        pointerEvents: isDisabled ? 'none' : 'auto',
+      }}
+    >
+      {icon}
+    </a>
+  )
+}
+
 export function ApplicationDetail({ appId }: ApplicationDetailProps) {
   const { accessToken, config } = useAuth()
   const { activeProfile } = useProfile()
@@ -103,6 +150,7 @@ export function ApplicationDetail({ appId }: ApplicationDetailProps) {
     updateApplication,
   } = useApplications()
   const pushToast = useToastStore((state) => state.push)
+
   const app = applications.find((item) => item.app_id === appId)
   const appRef = useRef<SheetRecord<ApplicationRecord> | null>(app ?? null)
 
@@ -120,6 +168,10 @@ export function ApplicationDetail({ appId }: ApplicationDetailProps) {
   const [quickInterviewSubmitting, setQuickInterviewSubmitting] = useState(false)
   const [isUploadingOffer, setIsUploadingOffer] = useState(false)
   const [isOfferDragActive, setIsOfferDragActive] = useState(false)
+  const [hoverRating, setHoverRating] = useState<number | null>(null)
+  const [isNarrowLayout, setIsNarrowLayout] = useState<boolean>(() =>
+    typeof window !== 'undefined' ? window.innerWidth < 1100 : false,
+  )
 
   const company = useMemo(
     () => companies.find((item) => item.company_id === app?.company_id),
@@ -143,16 +195,23 @@ export function ApplicationDetail({ appId }: ApplicationDetailProps) {
     return files.find((file) => file.file_id === app.job_offer_file_id) ?? null
   }, [app?.job_offer_file_id, files])
 
-  const offerLinks = useMemo(
-    () => {
-      if (!app?.job_offer_file_id) {
-        return []
-      }
+  const offerLinks = useMemo(() => {
+    if (!app?.job_offer_file_id) {
+      return []
+    }
 
-      return appFiles.filter((link) => link.app_id === appId && link.file_id === app.job_offer_file_id)
-    },
-    [app?.job_offer_file_id, appFiles, appId],
-  )
+    return appFiles.filter((link) => link.app_id === appId && link.file_id === app.job_offer_file_id)
+  }, [app?.job_offer_file_id, appFiles, appId])
+
+  const companyAddress = company?.address?.trim() ?? ''
+  const mapsApiKey = config.GOOGLE_MAPS_API_KEY || ''
+
+  useEffect(() => {
+    const onResize = () => setIsNarrowLayout(window.innerWidth < 1100)
+    onResize()
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   useEffect(() => {
     appRef.current = app ?? null
@@ -218,6 +277,7 @@ export function ApplicationDetail({ appId }: ApplicationDetailProps) {
     if (!current) {
       return
     }
+
     await updateApplication({
       ...current,
       ...patch,
@@ -376,6 +436,7 @@ export function ApplicationDetail({ appId }: ApplicationDetailProps) {
         fileName: file.name,
         parentFolderId: folderId,
       })
+
       const newOfferFileId = generateId()
       await createFile({
         file_id: newOfferFileId,
@@ -388,11 +449,13 @@ export function ApplicationDetail({ appId }: ApplicationDetailProps) {
         version_label: 'Oferta',
         created_at: nowIsoDateTime(),
       })
+
       await createAppFile({
         app_id: currentApp.app_id,
         file_id: newOfferFileId,
         attached_at: nowIsoDateTime(),
       })
+
       await patchApplication({ job_offer_file_id: newOfferFileId })
       pushToast({ title: 'Dodano plik oferty pracy.', variant: 'success' })
     } catch (error) {
@@ -404,6 +467,11 @@ export function ApplicationDetail({ appId }: ApplicationDetailProps) {
 
   async function handleOfferRemove(): Promise<void> {
     if (!currentApp.job_offer_file_id) {
+      return
+    }
+
+    const confirmed = window.confirm('Na pewno chcesz usunąć ofertę z tej aplikacji?')
+    if (!confirmed) {
       return
     }
 
@@ -439,56 +507,88 @@ export function ApplicationDetail({ appId }: ApplicationDetailProps) {
     }
   }
 
+  const currentRating = hoverRating ?? currentApp.excitement_rating ?? 3
+  const companyDirectionUrl = companyAddress
+    ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(companyAddress)}`
+    : ''
+  const companySearchUrl = companyAddress
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(companyAddress)}`
+    : ''
+
   return (
     <section className="page-enter" style={{ display: 'grid', gap: 16 }}>
-      <header className="cv-card" style={{ display: 'grid', gap: 16 }}>
-        <Link to="/aplikacje" className="cv-btn cv-btn-ghost" style={{ justifySelf: 'start' }}>
+      <header className="cv-card" style={{ display: 'grid', gap: 18, padding: 32 }}>
+        <Link to="/aplikacje" className="cv-btn cv-btn-ghost" style={{ justifySelf: 'start', paddingInline: 0 }}>
           <ArrowLeft size={16} />
           Aplikacje
         </Link>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-          <div style={{ display: 'grid', gap: 6 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span className="cv-file-icon cv-file-icon-other">
-                <Building2 size={18} />
-              </span>
-              {company ? (
-                <Link to={`/firmy/${company.company_id}`} style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>
-                  {company.name}
-                </Link>
-              ) : (
-                <span style={{ color: 'var(--text-secondary)' }}>Brak firmy</span>
-              )}
-            </div>
-            <h1 style={{ fontSize: '2rem', fontWeight: 700, lineHeight: 1.2 }}>{app.position_title}</h1>
+          <div style={{ display: 'grid', gap: 8 }}>
+            {company ? (
+              <Link to={`/firmy/${company.company_id}`} style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontWeight: 500 }}>
+                {company.name}
+              </Link>
+            ) : (
+              <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>Brak firmy</span>
+            )}
+            <h1 style={{ fontSize: '1.875rem', fontWeight: 700, lineHeight: 1.2 }}>{currentApp.position_title}</h1>
             <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
               {[1, 2, 3, 4, 5].map((value) => {
-                const active = (app.excitement_rating ?? 3) >= value
+                const active = currentRating >= value
                 return (
                   <button
                     key={value}
                     type="button"
                     className="cv-btn cv-btn-ghost cv-btn-icon"
-                    style={{ padding: 4 }}
+                    style={{ padding: 2 }}
+                    onMouseEnter={() => setHoverRating(value)}
+                    onMouseLeave={() => setHoverRating(null)}
                     onClick={() => void handleSetRating(value)}
                     title={`Ocena ${value}/5`}
                   >
-                    <Star size={18} fill={active ? 'var(--accent)' : 'transparent'} color={active ? 'var(--accent)' : 'var(--text-tertiary)'} />
+                    <Star
+                      size={20}
+                      fill={active ? 'var(--accent)' : 'transparent'}
+                      color={active ? 'var(--accent)' : '#D1D5DB'}
+                    />
                   </button>
                 )
               })}
             </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>
+                <CalendarDays size={14} />
+                {currentApp.applied_date || '-'}
+              </span>
+              {currentApp.position_url ? (
+                <a
+                  href={currentApp.position_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: 'var(--accent)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.875rem' }}
+                >
+                  Zobacz ogłoszenie
+                  <ExternalLink size={14} />
+                </a>
+              ) : null}
+            </div>
           </div>
 
-          <div style={{ display: 'grid', gap: 10, alignContent: 'start', minWidth: 240 }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-              <span className={statusBadgeClass(app.status)}>{STATUS_LABELS[app.status]}</span>
+          <div style={{ display: 'grid', gap: 8, alignContent: 'start', minWidth: 250 }}>
+            <span className={statusBadgeClass(currentApp.status)} style={{ justifySelf: 'start' }}>
+              {STATUS_LABELS[currentApp.status]}
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span
+                aria-hidden="true"
+                style={{ width: 10, height: 10, borderRadius: 9999, background: statusDotColor(currentApp.status) }}
+              />
               <select
                 className="cv-input cv-select"
-                style={{ maxWidth: 200 }}
-                value={app.status}
+                value={currentApp.status}
                 onChange={(event) => void patchApplication({ status: event.target.value as ApplicationStatus })}
+                style={{ maxWidth: 220 }}
               >
                 <option value="sent">Wysłano</option>
                 <option value="interview">Rozmowa</option>
@@ -497,41 +597,48 @@ export function ApplicationDetail({ appId }: ApplicationDetailProps) {
                 <option value="rejected">Odrzucone</option>
               </select>
             </div>
-            <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Data aplikacji: {app.applied_date || '-'}</span>
-            {app.position_url ? (
-              <a className="cv-btn cv-btn-secondary" href={app.position_url} target="_blank" rel="noreferrer">
-                <ExternalLink size={14} />
-                Link do ogłoszenia
-              </a>
-            ) : null}
           </div>
         </div>
       </header>
 
-      <section className="cv-card" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-        <button className="cv-btn cv-btn-secondary" type="button" onClick={() => setIsQuickInterviewOpen(true)}>
+      <section
+        style={{
+          display: 'flex',
+          gap: 10,
+          margin: '12px 0 4px 0',
+          overflowX: 'auto',
+          paddingBottom: 2,
+          whiteSpace: 'nowrap',
+        }}
+      >
+        <button className="cv-btn cv-btn-secondary" style={{ flex: '0 0 auto', padding: '8px 16px', borderRadius: 10 }} type="button" onClick={() => setIsQuickInterviewOpen(true)}>
           <Phone size={16} />
           Dodaj rozmowę
         </button>
-        <button className="cv-btn cv-btn-danger" type="button" onClick={() => void handleRejectAction()}>
+        <button
+          className="cv-btn cv-btn-ghost"
+          style={{ flex: '0 0 auto', padding: '8px 16px', borderRadius: 10, color: '#C93B3B' }}
+          type="button"
+          onClick={() => void handleRejectAction()}
+        >
           <XCircle size={16} />
-          Oznacz jako odrzucone
+          Oznacz odrzucone
         </button>
-        <button className="cv-btn cv-btn-secondary" type="button" onClick={() => void handleCreateFollowUp()}>
+        <button className="cv-btn cv-btn-secondary" style={{ flex: '0 0 auto', padding: '8px 16px', borderRadius: 10 }} type="button" onClick={() => void handleCreateFollowUp()}>
           <Mail size={16} />
-          Wyślij follow-up
+          Follow-up
         </button>
-        <button className="cv-btn cv-btn-ghost" type="button" onClick={() => void handleExportNearestStep()}>
-          <CalendarIcon size={16} />
-          Eksport do kalendarza
+        <button className="cv-btn cv-btn-ghost" style={{ flex: '0 0 auto', padding: '8px 16px', borderRadius: 10 }} type="button" onClick={() => void handleExportNearestStep()}>
+          <CalendarDays size={16} />
+          Eksport
         </button>
       </section>
 
       <section className="cv-card" style={{ display: 'grid', gap: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Przebieg rekrutacji</h2>
+          <h2 style={{ fontSize: '1rem', fontWeight: 600 }}>Przebieg rekrutacji</h2>
           <button className="cv-btn cv-btn-ghost" type="button" onClick={() => setShowStepForm((value) => !value)}>
-            {showStepForm ? 'Ukryj formularz kroku' : 'Dodaj krok'}
+            + Dodaj
           </button>
         </div>
 
@@ -542,171 +649,225 @@ export function ApplicationDetail({ appId }: ApplicationDetailProps) {
           onRequestAdd={() => setShowStepForm(true)}
         />
 
-        {showStepForm ? <StepForm app={app} companyName={company?.name || 'Firma'} /> : null}
+        {showStepForm ? <StepForm app={currentApp} companyName={company?.name || 'Firma'} /> : null}
       </section>
 
-      <section
-        style={{
-          display: 'grid',
-          gap: 20,
-          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-          alignItems: 'start',
-        }}
-      >
-        <article className="cv-card" style={{ gridRow: 'span 2', display: 'grid', gap: 12 }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Oferta pracy</h3>
-          {!offerFile ? (
-            <div
-              className="cv-card-nested"
-              style={{
-                borderStyle: 'dashed',
-                borderWidth: 2,
-                borderColor: isOfferDragActive ? 'var(--accent)' : 'var(--border-default)',
-                minHeight: 260,
-                display: 'grid',
-                placeItems: 'center',
-                textAlign: 'center',
-                gap: 10,
-              }}
-              onDragOver={(event) => {
-                event.preventDefault()
-                setIsOfferDragActive(true)
-              }}
-              onDragLeave={(event) => {
-                event.preventDefault()
-                setIsOfferDragActive(false)
-              }}
-              onDrop={(event) => {
-                event.preventDefault()
-                setIsOfferDragActive(false)
-                const file = event.dataTransfer.files?.[0]
-                if (file) {
-                  void handleOfferUpload(file)
-                }
-              }}
-            >
-              <p style={{ fontWeight: 600 }}>Przeciągnij PDF z ofertą</p>
-              <p style={{ color: 'var(--text-secondary)' }}>lub wybierz plik z dysku</p>
-              <label className="cv-btn cv-btn-primary" style={{ cursor: isUploadingOffer ? 'wait' : 'pointer' }}>
-                {isUploadingOffer ? 'Wysyłanie...' : 'Prześlij PDF'}
-                <input
-                  type="file"
-                  accept="application/pdf"
-                  style={{ display: 'none' }}
-                  disabled={isUploadingOffer}
-                  onChange={(event) => {
-                    const file = event.target.files?.[0]
-                    if (file) {
-                      void handleOfferUpload(file)
-                    }
-                  }}
-                />
-              </label>
+      <section className="grid gap-5 lg:grid-cols-[1.63fr_1fr] items-start">
+        <div style={{ display: 'grid', gap: 20, minWidth: 0 }}>
+          <article className="cv-card" style={{ display: 'grid', gap: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 600 }}>📄 Oferta pracy</h3>
+              {offerFile ? (
+                <button className="cv-btn cv-btn-ghost cv-btn-icon" type="button" onClick={() => void handleOfferRemove()} title="Usuń ofertę" style={{ color: '#C93B3B' }}>
+                  <XCircle size={16} />
+                </button>
+              ) : null}
             </div>
-          ) : (
-            <>
-              <iframe
-                title={`Podgląd oferty ${offerFile.file_name}`}
-                src={`https://drive.google.com/file/d/${offerFile.drive_file_id}/preview`}
-                style={{ width: '100%', minHeight: 420, border: '1px solid var(--border-default)', borderRadius: 12 }}
-              />
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <a className="cv-btn cv-btn-secondary" href={offerFile.drive_url} target="_blank" rel="noreferrer">
-                  <ExternalLink size={14} />
-                  Otwórz w Drive
+
+            {!offerFile ? (
+              <div
+                className="cv-card-nested"
+                style={{
+                  minHeight: 220,
+                  borderStyle: 'dashed',
+                  borderWidth: 2,
+                  borderColor: isOfferDragActive ? 'var(--accent)' : '#D1D5DB',
+                  background: isOfferDragActive ? 'var(--accent-light)' : '#F8F9FB',
+                  display: 'grid',
+                  placeItems: 'center',
+                  textAlign: 'center',
+                  gap: 8,
+                }}
+                onDragOver={(event) => {
+                  event.preventDefault()
+                  setIsOfferDragActive(true)
+                }}
+                onDragLeave={(event) => {
+                  event.preventDefault()
+                  setIsOfferDragActive(false)
+                }}
+                onDrop={(event) => {
+                  event.preventDefault()
+                  setIsOfferDragActive(false)
+                  const file = event.dataTransfer.files?.[0]
+                  if (file) {
+                    void handleOfferUpload(file)
+                  }
+                }}
+              >
+                <p style={{ fontWeight: 600 }}>Przeciągnij plik PDF z ofertą pracy</p>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>lub kliknij aby wybrać plik</p>
+                <label className="cv-btn cv-btn-primary" style={{ cursor: isUploadingOffer ? 'wait' : 'pointer' }}>
+                  {isUploadingOffer ? 'Wysyłanie...' : 'Prześlij PDF'}
+                  <input
+                    type="file"
+                    accept=".pdf,application/pdf"
+                    style={{ display: 'none' }}
+                    disabled={isUploadingOffer}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0]
+                      if (file) {
+                        void handleOfferUpload(file)
+                      }
+                    }}
+                  />
+                </label>
+              </div>
+            ) : (
+              <>
+                <iframe
+                  title={`Podgląd oferty ${offerFile.file_name}`}
+                  src={`https://drive.google.com/file/d/${offerFile.drive_file_id}/preview`}
+                  style={{ width: '100%', minHeight: 620, border: 'none', borderRadius: 12 }}
+                />
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <a className="cv-btn cv-btn-ghost" href={offerFile.drive_url} target="_blank" rel="noreferrer">
+                    <ExternalLink size={16} />
+                    Otwórz w Drive
+                  </a>
+                  <a
+                    className="cv-btn cv-btn-ghost"
+                    href={`https://drive.google.com/uc?export=download&id=${offerFile.drive_file_id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <Download size={16} />
+                    Pobierz
+                  </a>
+                </div>
+              </>
+            )}
+          </article>
+
+          <article className="cv-card" style={{ display: 'grid', gap: 8, padding: 28 }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 600 }}>📝 Opis roli</h3>
+            <textarea
+              className="cv-input cv-textarea"
+              style={{ minHeight: 180, fontSize: 15, lineHeight: 1.7 }}
+              value={roleDescription}
+              onChange={(event) => setRoleDescription(event.target.value)}
+              placeholder="Wklej opis stanowiska, wymagania, zakres obowiązków..."
+            />
+            <p style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem' }}>Autozapis po 2 sekundach.</p>
+          </article>
+
+          <article className="cv-card" style={{ display: 'grid', gap: 8, padding: 28 }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 600 }}>📋 Notatki</h3>
+            <textarea
+              className="cv-input cv-textarea"
+              style={{ minHeight: 150, fontSize: 15, lineHeight: 1.7 }}
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              placeholder="Twoje notatki, wrażenia, pytania do zadania..."
+            />
+            <p style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem' }}>Autozapis po 2 sekundach.</p>
+          </article>
+        </div>
+
+        <aside
+          style={{
+            display: 'grid',
+            gap: 16,
+            alignSelf: 'start',
+            position: isNarrowLayout ? 'static' : 'sticky',
+            top: isNarrowLayout ? undefined : 'calc(var(--topbar-height) + 20px)',
+          }}
+        >
+          <article className="cv-card" style={{ display: 'grid', gap: 12, padding: 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 600 }}>🏢 Firma</h3>
+              {company ? (
+                <Link to={`/firmy/${company.company_id}`} className="cv-btn cv-btn-ghost cv-btn-icon" title="Edytuj firmę">
+                  <Pencil size={15} />
+                </Link>
+              ) : null}
+            </div>
+
+            {company ? (
+              <>
+                <Link to={`/firmy/${company.company_id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                  <p style={{ fontSize: '1.05rem', fontWeight: 600 }}>{company.name}</p>
+                </Link>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{company.industry || 'Brak branży'}</p>
+
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {externalIconLink(<Globe size={16} />, company.website, 'Strona WWW')}
+                  {externalIconLink(<Building2 size={16} />, company.careers_url, 'Kariera')}
+                  {externalIconLink(<Linkedin size={16} />, company.linkedin_url, 'LinkedIn')}
+                </div>
+
+                <MapEmbed
+                  address={companyAddress}
+                  mapsApiKey={mapsApiKey}
+                  title={`Mapa firmy ${company.name}`}
+                  height={200}
+                />
+
+                <a
+                  className="cv-btn cv-btn-primary"
+                  href={companyDirectionUrl || undefined}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ width: '100%', justifyContent: 'center', opacity: companyAddress ? 1 : 0.45, pointerEvents: companyAddress ? 'auto' : 'none' }}
+                >
+                  <Navigation2 size={16} />
+                  Prowadź do firmy
                 </a>
                 <a
                   className="cv-btn cv-btn-ghost"
-                  href={`https://drive.google.com/uc?export=download&id=${offerFile.drive_file_id}`}
+                  href={companySearchUrl || undefined}
                   target="_blank"
                   rel="noreferrer"
+                  style={{ width: '100%', justifyContent: 'center', opacity: companyAddress ? 1 : 0.45, pointerEvents: companyAddress ? 'auto' : 'none' }}
                 >
-                  <Download size={14} />
-                  Pobierz
+                  <MapPin size={16} />
+                  Zobacz na mapie
                 </a>
-                <button className="cv-btn cv-btn-danger" type="button" onClick={() => void handleOfferRemove()}>
-                  Usuń
+              </>
+            ) : (
+              <p style={{ color: 'var(--text-secondary)' }}>Brak danych firmy.</p>
+            )}
+          </article>
+
+          <article className="cv-card" style={{ display: 'grid', gap: 10, padding: 20, textAlign: 'center' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 600, textAlign: 'left' }}>💰 Finanse</h3>
+
+            {!editingSalary ? (
+              <>
+                <p style={{ fontSize: '1.5rem', fontWeight: 700 }}>{formatMonthlySalary(currentApp.monthly_salary)}</p>
+                <p style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>/ miesiąc</p>
+                <div style={{ height: 1, background: 'var(--border-default)', margin: '6px 0' }} />
+                <p style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--accent)' }}>{formatHourlySalary(currentApp.hourly_rate)}</p>
+                <p style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>/ godzina</p>
+                <button className="cv-btn cv-btn-ghost" type="button" style={{ width: '100%' }} onClick={() => setEditingSalary(true)}>
+                  Edytuj
                 </button>
+              </>
+            ) : (
+              <div style={{ display: 'grid', gap: 8 }}>
+                <input
+                  className="cv-input"
+                  type="number"
+                  min={0}
+                  value={salaryDraft}
+                  onChange={(event) => setSalaryDraft(event.target.value)}
+                  placeholder="Kwota miesięczna PLN"
+                />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="cv-btn cv-btn-primary" type="button" style={{ width: '100%' }} onClick={() => void handleSalarySave()}>
+                    Zapisz
+                  </button>
+                  <button className="cv-btn cv-btn-ghost" type="button" style={{ width: '100%' }} onClick={() => setEditingSalary(false)}>
+                    Anuluj
+                  </button>
+                </div>
               </div>
-            </>
-          )}
-        </article>
+            )}
+          </article>
 
-        <article className="cv-card" style={{ display: 'grid', gap: 12 }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Firma</h3>
-          {company ? (
-            <>
-              <Link to={`/firmy/${company.company_id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                <p style={{ fontWeight: 700, fontSize: '1.05rem' }}>{company.name}</p>
-              </Link>
-              <p style={{ color: 'var(--text-secondary)' }}>{company.industry || 'Brak branży'}</p>
-              <CompanyMapSection company={company} mapHeight={160} />
-            </>
-          ) : (
-            <p style={{ color: 'var(--text-secondary)' }}>Brak danych firmy.</p>
-          )}
-        </article>
-
-        <article className="cv-card" style={{ display: 'grid', gap: 10 }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Finanse</h3>
-          {!editingSalary ? (
-            <>
-              <p style={{ fontSize: '1.9rem', fontWeight: 700 }}>{formatMonthlySalary(app.monthly_salary)}</p>
-              <p style={{ color: 'var(--text-secondary)' }}>/ miesiąc</p>
-              <p style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--accent)' }}>{formatHourlySalary(app.hourly_rate)}</p>
-              <p style={{ color: 'var(--text-secondary)' }}>/ godzina</p>
-              <button className="cv-btn cv-btn-secondary" type="button" onClick={() => setEditingSalary(true)}>
-                Edytuj
-              </button>
-            </>
-          ) : (
-            <div style={{ display: 'grid', gap: 8 }}>
-              <input
-                className="cv-input"
-                type="number"
-                min={0}
-                value={salaryDraft}
-                onChange={(event) => setSalaryDraft(event.target.value)}
-                placeholder="Stawka miesięczna PLN"
-              />
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button className="cv-btn cv-btn-primary" type="button" onClick={() => void handleSalarySave()}>
-                  Zapisz
-                </button>
-                <button className="cv-btn cv-btn-ghost" type="button" onClick={() => setEditingSalary(false)}>
-                  Anuluj
-                </button>
-              </div>
-            </div>
-          )}
-        </article>
-
-        <AttachedRecruiters app={app} />
-        <AttachedFiles app={app} />
-
-        <article className="cv-card" style={{ gridColumn: 'span 2', display: 'grid', gap: 8 }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Opis roli</h3>
-          <textarea
-            className="cv-input cv-textarea"
-            style={{ minHeight: 140 }}
-            value={roleDescription}
-            onChange={(event) => setRoleDescription(event.target.value)}
-            placeholder="Wklej opis stanowiska, wymagania, zakres obowiązków..."
-          />
-          <p style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem' }}>Autozapis po 2 sekundach.</p>
-        </article>
-
-        <article className="cv-card" style={{ display: 'grid', gap: 8 }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Notatki</h3>
-          <textarea
-            className="cv-input cv-textarea"
-            style={{ minHeight: 140 }}
-            value={notes}
-            onChange={(event) => setNotes(event.target.value)}
-            placeholder="Twoje notatki, wrażenia i pytania do zadania..."
-          />
-          <p style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem' }}>Autozapis po 2 sekundach.</p>
-        </article>
+          <AttachedRecruiters app={currentApp} />
+          <AttachedFiles app={currentApp} />
+        </aside>
       </section>
 
       {isQuickInterviewOpen ? (

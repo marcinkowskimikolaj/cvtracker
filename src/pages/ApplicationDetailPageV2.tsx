@@ -1,7 +1,7 @@
 import { useParams } from 'react-router-dom'
 import { ApplicationDetail } from '../components/applications/ApplicationDetail'
 
-export function ApplicationDetailPage() {
+export function ApplicationDetailPageV2() {
   const { appId } = useParams<{ appId: string }>()
 
   if (!appId) {

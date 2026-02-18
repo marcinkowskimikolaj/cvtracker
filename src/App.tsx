@@ -60,7 +60,7 @@ function lazyWithRetry<T extends ComponentType<unknown>>(
 const DashboardPage = lazyWithRetry(() => import('./pages/DashboardPage').then((module) => ({ default: module.DashboardPage })))
 const ApplicationsPage = lazyWithRetry(() => import('./pages/ApplicationsPage').then((module) => ({ default: module.ApplicationsPage })))
 const ApplicationDetailPage = lazyWithRetry(() =>
-  import('./pages/ApplicationDetailPage').then((module) => ({ default: module.ApplicationDetailPage })),
+  import('./pages/ApplicationDetailPageV2').then((module) => ({ default: module.ApplicationDetailPageV2 })),
 )
 const CompaniesPage = lazyWithRetry(() => import('./pages/CompaniesPage').then((module) => ({ default: module.CompaniesPage })))
 const CompanyDetailPage = lazyWithRetry(() =>
