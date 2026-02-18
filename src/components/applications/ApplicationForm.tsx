@@ -23,7 +23,7 @@ export function ApplicationForm({ open, editingApplication, onClose }: Applicati
   const { accessToken, config } = useAuth()
   const { activeProfile } = useProfile()
   const { companies, createCompany } = useCompanies()
-  const { createApplication, createAppFile, updateApplication } = useApplications()
+  const { createApplication, createAppFile, createAppStep, updateApplication } = useApplications()
   const { createFile } = useFiles()
   const pushToast = useToastStore((state) => state.push)
   const offerInputRef = useRef<HTMLInputElement | null>(null)
@@ -219,6 +219,18 @@ export function ApplicationForm({ open, editingApplication, onClose }: Applicati
           notes: '',
           created_at: nowIsoDateTime(),
           updated_at: nowIsoDateTime(),
+        })
+
+        await createAppStep({
+          step_id: generateId(),
+          app_id: appId,
+          step_type: 'other',
+          step_name: 'Wysłano aplikację',
+          step_date: appliedDate,
+          step_time: '',
+          step_notes: 'Automatycznie dodano po utworzeniu aplikacji.',
+          google_calendar_event_id: '',
+          created_at: nowIsoDateTime(),
         })
       }
 
