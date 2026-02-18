@@ -5,7 +5,6 @@ import {
   FolderOpen,
   LayoutDashboard,
   Sparkles,
-  Users,
 } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { useProfile } from '../../hooks/useProfile'
@@ -15,7 +14,6 @@ const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/aplikacje', icon: Briefcase, label: 'Aplikacje' },
   { to: '/firmy', icon: Building2, label: 'Firmy' },
-  { to: '/rekruterzy', icon: Users, label: 'Rekruterzy' },
   { to: '/pliki', icon: FolderOpen, label: 'Pliki' },
   { to: '/kalendarz', icon: CalendarDays, label: 'Kalendarz' },
 ]

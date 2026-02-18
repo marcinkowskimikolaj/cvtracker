@@ -98,17 +98,12 @@ export function CompanyCard({ companyId }: CompanyCardProps) {
         ) : (
           <div style={{ display: 'grid', gap: 8 }}>
             {relatedRecruiters.map((recruiter) => (
-              <Link
-                key={recruiter.recruiter_id}
-                to={`/rekruterzy/${recruiter.recruiter_id}`}
-                className="cv-card-nested"
-                style={{ textDecoration: 'none' }}
-              >
+              <div key={recruiter.recruiter_id} className="cv-card-nested">
                 <p style={{ fontWeight: 500 }}>
                   {recruiter.first_name} {recruiter.last_name}
                 </p>
                 <p style={{ color: 'var(--text-secondary)' }}>{recruiter.email || 'Brak emaila'}</p>
-              </Link>
+              </div>
             ))}
           </div>
         )}

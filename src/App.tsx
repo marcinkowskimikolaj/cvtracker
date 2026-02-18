@@ -66,10 +66,6 @@ const CompaniesPage = lazyWithRetry(() => import('./pages/CompaniesPage').then((
 const CompanyDetailPage = lazyWithRetry(() =>
   import('./pages/CompanyDetailPage').then((module) => ({ default: module.CompanyDetailPage })),
 )
-const RecruitersPage = lazyWithRetry(() => import('./pages/RecruitersPage').then((module) => ({ default: module.RecruitersPage })))
-const RecruiterDetailPage = lazyWithRetry(() =>
-  import('./pages/RecruiterDetailPage').then((module) => ({ default: module.RecruiterDetailPage })),
-)
 const FilesPage = lazyWithRetry(() => import('./pages/FilesPage').then((module) => ({ default: module.FilesPage })))
 const CalendarPage = lazyWithRetry(() => import('./pages/CalendarPage').then((module) => ({ default: module.CalendarPage })))
 
@@ -129,22 +125,6 @@ function ProtectedApp() {
           element={
             <Suspense fallback={<PageFallback />}>
               <CompanyDetailPage />
-            </Suspense>
-          }
-        />
-        <Route
-          path="/rekruterzy"
-          element={
-            <Suspense fallback={<PageFallback />}>
-              <RecruitersPage />
-            </Suspense>
-          }
-        />
-        <Route
-          path="/rekruterzy/:recruiterId"
-          element={
-            <Suspense fallback={<PageFallback />}>
-              <RecruiterDetailPage />
             </Suspense>
           }
         />

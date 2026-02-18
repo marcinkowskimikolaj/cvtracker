@@ -9,6 +9,20 @@ import { useRecruiters } from '../../hooks/useRecruiters'
 import { useSearch } from '../../hooks/useSearch'
 import type { SearchResult } from '../../types'
 
+function getApplicationTimestamp(updatedAt: string, appliedDate: string): number {
+  const updatedTimestamp = Date.parse(updatedAt)
+  if (!Number.isNaN(updatedTimestamp)) {
+    return updatedTimestamp
+  }
+
+  const appliedTimestamp = Date.parse(appliedDate)
+  if (!Number.isNaN(appliedTimestamp)) {
+    return appliedTimestamp
+  }
+
+  return 0
+}
+
 function iconForGroup(group: SearchResult['group']) {
   if (group === 'Firmy') {
     return <Building2 size={16} />
@@ -30,8 +44,14 @@ export function SearchPalette() {
   const { files } = useFiles()
   const { companies } = useCompanies()
   const { recruiters } = useRecruiters()
-  const { applications } = useApplications()
+  const { applications, appRecruiters } = useApplications()
   const { isOpen, open, close, query, setQuery, activeIndex, setActiveIndex } = useSearch()
+
+  const companiesById = useMemo(() => new Map(companies.map((company) => [company.company_id, company])), [companies])
+  const applicationsById = useMemo(
+    () => new Map(applications.map((application) => [application.app_id, application])),
+    [applications],
+  )
 
   const baseResults = useMemo<SearchResult[]>(() => {
     const companyResults: SearchResult[] = companies.map((company) => ({
@@ -53,13 +73,38 @@ export function SearchPalette() {
       }
     })
 
-    const recruiterResults: SearchResult[] = recruiters.map((recruiter) => ({
-      id: `recruiter-${recruiter.recruiter_id}`,
-      label: `${recruiter.first_name} ${recruiter.last_name}`,
-      sublabel: recruiter.email,
-      group: 'Rekruterzy',
-      path: `/rekruterzy/${recruiter.recruiter_id}`,
-    }))
+    const recruiterResults: SearchResult[] = recruiters.map((recruiter) => {
+      const relatedApps = appRecruiters
+        .filter((relation) => relation.recruiter_id === recruiter.recruiter_id)
+        .map((relation) => applicationsById.get(relation.app_id))
+        .filter((application): application is (typeof applications)[number] => Boolean(application))
+
+      const latestApplication = relatedApps.reduce<(typeof applications)[number] | null>((latest, current) => {
+        if (!latest) {
+          return current
+        }
+
+        const latestTimestamp = getApplicationTimestamp(latest.updated_at, latest.applied_date)
+        const currentTimestamp = getApplicationTimestamp(current.updated_at, current.applied_date)
+
+        return currentTimestamp > latestTimestamp ? current : latest
+      }, null)
+
+      const companyName = latestApplication
+        ? companiesById.get(latestApplication.company_id)?.name || 'Brak firmy'
+        : 'Brak powiązanej aplikacji'
+      const contextLabel = latestApplication
+        ? `${companyName} • ${latestApplication.position_title}`
+        : 'Brak powiązanej aplikacji'
+
+      return {
+        id: `recruiter-${recruiter.recruiter_id}`,
+        label: `${recruiter.first_name} ${recruiter.last_name}`,
+        sublabel: recruiter.email ? `${recruiter.email} • ${contextLabel}` : contextLabel,
+        group: 'Rekruterzy',
+        path: latestApplication ? `/aplikacje/${latestApplication.app_id}` : '/aplikacje',
+      }
+    })
 
     const fileResults: SearchResult[] = files.map((file) => ({
       id: `file-${file.file_id}`,
@@ -70,7 +115,7 @@ export function SearchPalette() {
     }))
 
     return [...companyResults, ...appResults, ...recruiterResults, ...fileResults]
-  }, [applications, companies, files, recruiters])
+  }, [appRecruiters, applications, applicationsById, companies, companiesById, files, recruiters])
 
   const fuse = useMemo(
     () =>
