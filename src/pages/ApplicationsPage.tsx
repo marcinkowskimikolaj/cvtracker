@@ -15,7 +15,7 @@ export function ApplicationsPage() {
   const { companies } = useCompanies()
   const pushToast = useToastStore((state) => state.push)
 
-  const [viewMode, setViewMode] = useState<ApplicationViewMode>('kanban')
+  const [viewMode, setViewMode] = useState<ApplicationViewMode>('table')
   const [statusFilter, setStatusFilter] = useState<ApplicationStatus | 'all'>('all')
   const [priorityFilter, setPriorityFilter] = useState<Priority | 'all'>('all')
   const [showForm, setShowForm] = useState(false)

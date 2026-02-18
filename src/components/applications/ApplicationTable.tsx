@@ -1,3 +1,4 @@
+import { Eye } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { ApplicationRecord, CompanyRecord, SheetRecord } from '../../types'
@@ -95,6 +96,7 @@ export function ApplicationTable({ applications, companies }: ApplicationTablePr
           <th>Oczekiwania</th>
           <th>Stawka godz.</th>
           <th>Czas oczekiwania</th>
+          <th>Podgląd</th>
         </tr>
       </thead>
       <tbody>
@@ -120,6 +122,16 @@ export function ApplicationTable({ applications, companies }: ApplicationTablePr
               <td>{application.monthly_salary ? `${application.monthly_salary} PLN` : '-'}</td>
               <td>{application.hourly_rate ? `${application.hourly_rate} PLN` : '-'}</td>
               <td>{waitingDays} dni</td>
+              <td>
+                <Link
+                  to={`/aplikacje/${application.app_id}`}
+                  className="cv-btn cv-btn-ghost cv-btn-icon"
+                  title="Otwórz szczegóły aplikacji"
+                  aria-label={`Otwórz szczegóły aplikacji: ${application.position_title}`}
+                >
+                  <Eye size={16} />
+                </Link>
+              </td>
             </tr>
           )
         })}
