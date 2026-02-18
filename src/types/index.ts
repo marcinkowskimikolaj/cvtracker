@@ -113,8 +113,10 @@ export interface ApplicationRecord {
   position_url: string
   status: ApplicationStatus
   priority: Priority
+  excitement_rating: number | null
   monthly_salary: number | null
   hourly_rate: number | null
+  job_offer_file_id: string
   applied_date: string
   response_date: string
   role_description: string

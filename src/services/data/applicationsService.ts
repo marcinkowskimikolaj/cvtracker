@@ -12,8 +12,10 @@ interface RawApplicationRecord {
   position_url: string
   status: string
   priority: string
+  excitement_rating: string
   monthly_salary: string
   hourly_rate: string
+  job_offer_file_id: string
   applied_date: string
   response_date: string
   role_description: string
@@ -31,8 +33,10 @@ function toApplicationRecord(row: RawApplicationRecord): ApplicationRecord {
     position_url: row.position_url || '',
     status: (row.status || 'sent') as ApplicationRecord['status'],
     priority: (row.priority || 'normal') as ApplicationRecord['priority'],
+    excitement_rating: parseNumber(row.excitement_rating),
     monthly_salary: parseNumber(row.monthly_salary),
     hourly_rate: parseNumber(row.hourly_rate),
+    job_offer_file_id: row.job_offer_file_id || '',
     applied_date: row.applied_date || '',
     response_date: row.response_date || '',
     role_description: row.role_description || '',
@@ -51,8 +55,10 @@ function toSheetRow(record: ApplicationRecord): Record<string, string> {
     position_url: record.position_url,
     status: record.status,
     priority: record.priority,
+    excitement_rating: stringifyNumber(record.excitement_rating),
     monthly_salary: stringifyNumber(record.monthly_salary),
     hourly_rate: stringifyNumber(record.hourly_rate),
+    job_offer_file_id: record.job_offer_file_id,
     applied_date: record.applied_date,
     response_date: record.response_date,
     role_description: record.role_description,
