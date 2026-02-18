@@ -15,6 +15,15 @@ export type ApplicationStatus =
   | 'offer'
 
 export type Priority = 'normal' | 'high' | 'promising'
+export type SeniorityLevel =
+  | 'intern'
+  | 'junior'
+  | 'mid'
+  | 'senior'
+  | 'lead'
+  | 'manager'
+  | 'unknown'
+export type WorkMode = 'remote' | 'hybrid' | 'onsite' | 'unknown'
 
 export type StepType =
   | 'screening'
@@ -113,7 +122,13 @@ export interface ApplicationRecord {
   position_url: string
   status: ApplicationStatus
   priority: Priority
+  seniority: SeniorityLevel
+  work_mode: WorkMode
   excitement_rating: number | null
+  offer_interest_rating: number | null
+  location_rating: number | null
+  company_rating: number | null
+  fit_rating: number | null
   monthly_salary: number | null
   hourly_rate: number | null
   job_offer_file_id: string

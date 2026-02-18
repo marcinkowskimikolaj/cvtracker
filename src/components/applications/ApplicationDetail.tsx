@@ -29,10 +29,17 @@ import type {
   AppStepRecord,
   ApplicationRecord,
   ApplicationStatus,
+  SeniorityLevel,
   SheetRecord,
   StepType,
+  WorkMode,
 } from '../../types'
-import { STATUS_LABELS, STEP_TYPE_LABELS } from '../../utils/constants'
+import {
+  SENIORITY_LABELS,
+  STATUS_LABELS,
+  STEP_TYPE_LABELS,
+  WORK_MODE_LABELS,
+} from '../../utils/constants'
 import { nowIsoDate, nowIsoDateTime } from '../../utils/dates'
 import { calculateHourlyRate } from '../../utils/salary'
 import { generateId } from '../../utils/uuid'
@@ -107,6 +114,27 @@ function formatHourlySalary(value: number | null): string {
   return `${new Intl.NumberFormat('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)} PLN`
 }
 
+const SCORE_FIELDS = [
+  { key: 'offer_interest_rating', label: 'Ocena oferty' },
+  { key: 'location_rating', label: 'Ocena lokalizacji' },
+  { key: 'company_rating', label: 'Ocena firmy' },
+  { key: 'fit_rating', label: 'Dopasowanie do oferty' },
+] as const
+
+type ScoreField = (typeof SCORE_FIELDS)[number]['key']
+
+function computeAverageRating(
+  ratings: Array<number | null>,
+): number | null {
+  const normalized = ratings.filter((value): value is number => value !== null)
+  if (!normalized.length) {
+    return null
+  }
+
+  const average = normalized.reduce((sum, value) => sum + value, 0) / normalized.length
+  return Number(average.toFixed(2))
+}
+
 function externalIconLink(icon: JSX.Element, url: string, title: string) {
   const isDisabled = !url
 
@@ -168,7 +196,7 @@ export function ApplicationDetail({ appId }: ApplicationDetailProps) {
   const [quickInterviewSubmitting, setQuickInterviewSubmitting] = useState(false)
   const [isUploadingOffer, setIsUploadingOffer] = useState(false)
   const [isOfferDragActive, setIsOfferDragActive] = useState(false)
-  const [hoverRating, setHoverRating] = useState<number | null>(null)
+  const [scoreHover, setScoreHover] = useState<Partial<Record<ScoreField, number>>>({})
   const [isNarrowLayout, setIsNarrowLayout] = useState<boolean>(() =>
     typeof window !== 'undefined' ? window.innerWidth < 1100 : false,
   )
@@ -285,9 +313,32 @@ export function ApplicationDetail({ appId }: ApplicationDetailProps) {
     })
   }
 
-  async function handleSetRating(value: number): Promise<void> {
+  async function handleSetScore(field: ScoreField, value: number): Promise<void> {
+    const current = appRef.current
+    if (!current) {
+      return
+    }
+
+    const nextRatings = {
+      offer_interest_rating: current.offer_interest_rating,
+      location_rating: current.location_rating,
+      company_rating: current.company_rating,
+      fit_rating: current.fit_rating,
+      [field]: value,
+    }
+
+    const average = computeAverageRating([
+      nextRatings.offer_interest_rating,
+      nextRatings.location_rating,
+      nextRatings.company_rating,
+      nextRatings.fit_rating,
+    ])
+
     try {
-      await patchApplication({ excitement_rating: value })
+      await patchApplication({
+        [field]: value,
+        excitement_rating: average === null ? null : Math.round(average),
+      } as Partial<ApplicationRecord>)
     } catch (error) {
       pushToast({ title: error instanceof Error ? error.message : 'Nie udało się zaktualizować oceny.', variant: 'error' })
     }
@@ -507,7 +558,19 @@ export function ApplicationDetail({ appId }: ApplicationDetailProps) {
     }
   }
 
-  const currentRating = hoverRating ?? currentApp.excitement_rating ?? 3
+  const scoreAverage = computeAverageRating([
+    currentApp.offer_interest_rating,
+    currentApp.location_rating,
+    currentApp.company_rating,
+    currentApp.fit_rating,
+  ])
+  const scoreCount = [
+    currentApp.offer_interest_rating,
+    currentApp.location_rating,
+    currentApp.company_rating,
+    currentApp.fit_rating,
+  ].filter((value) => value !== null).length
+  const currentRating = scoreAverage === null ? currentApp.excitement_rating ?? 0 : Math.round(scoreAverage)
   const companyDirectionUrl = companyAddress
     ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(companyAddress)}`
     : ''
@@ -533,34 +596,29 @@ export function ApplicationDetail({ appId }: ApplicationDetailProps) {
               <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>Brak firmy</span>
             )}
             <h1 style={{ fontSize: '1.875rem', fontWeight: 700, lineHeight: 1.2 }}>{currentApp.position_title}</h1>
-            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
               {[1, 2, 3, 4, 5].map((value) => {
                 const active = currentRating >= value
                 return (
-                  <button
+                  <Star
                     key={value}
-                    type="button"
-                    className="cv-btn cv-btn-ghost cv-btn-icon"
-                    style={{ padding: 2 }}
-                    onMouseEnter={() => setHoverRating(value)}
-                    onMouseLeave={() => setHoverRating(null)}
-                    onClick={() => void handleSetRating(value)}
-                    title={`Ocena ${value}/5`}
-                  >
-                    <Star
-                      size={20}
-                      fill={active ? 'var(--accent)' : 'transparent'}
-                      color={active ? 'var(--accent)' : '#D1D5DB'}
-                    />
-                  </button>
+                    size={20}
+                    fill={active ? 'var(--accent)' : 'transparent'}
+                    color={active ? 'var(--accent)' : '#D1D5DB'}
+                  />
                 )
               })}
+              <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginLeft: 6 }}>
+                {scoreAverage === null ? 'Brak średniej ocen' : `Średnia ocen: ${scoreAverage.toFixed(2)}/5`}
+              </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>
                 <CalendarDays size={14} />
                 {currentApp.applied_date || '-'}
               </span>
+              <span className="cv-badge cv-badge-default">{SENIORITY_LABELS[currentApp.seniority]}</span>
+              <span className="cv-badge cv-badge-default">{WORK_MODE_LABELS[currentApp.work_mode]}</span>
               {currentApp.position_url ? (
                 <a
                   href={currentApp.position_url}
@@ -863,6 +921,97 @@ export function ApplicationDetail({ appId }: ApplicationDetailProps) {
                 </div>
               </div>
             )}
+          </article>
+
+          <article className="cv-card" style={{ display: 'grid', gap: 12, padding: 20 }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 600 }}>⭐ Scoring oferty</h3>
+
+            {SCORE_FIELDS.map((item) => {
+              const currentValue = currentApp[item.key]
+              const activeValue = scoreHover[item.key] ?? currentValue ?? 0
+
+              return (
+                <div key={item.key} style={{ display: 'grid', gap: 6 }}>
+                  <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{item.label}</span>
+                  <div style={{ display: 'flex', gap: 2 }}>
+                    {[1, 2, 3, 4, 5].map((value) => {
+                      const isActive = activeValue >= value
+                      return (
+                        <button
+                          key={`${item.key}-${value}`}
+                          type="button"
+                          className="cv-btn cv-btn-ghost cv-btn-icon"
+                          style={{ padding: 2 }}
+                          onMouseEnter={() =>
+                            setScoreHover((current) => ({ ...current, [item.key]: value }))
+                          }
+                          onMouseLeave={() =>
+                            setScoreHover((current) => ({ ...current, [item.key]: undefined }))
+                          }
+                          onClick={() => void handleSetScore(item.key, value)}
+                          title={`${item.label}: ${value}/5`}
+                        >
+                          <Star
+                            size={18}
+                            fill={isActive ? 'var(--accent)' : 'transparent'}
+                            color={isActive ? 'var(--accent)' : '#D1D5DB'}
+                          />
+                        </button>
+                      )
+                    })}
+                    <span style={{ color: 'var(--text-tertiary)', fontSize: '0.8rem', alignSelf: 'center', marginLeft: 4 }}>
+                      {currentValue ?? '-'}
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
+
+            <div style={{ height: 1, background: 'var(--border-default)' }} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Średnia ({scoreCount}/4)</span>
+              <strong style={{ fontSize: '1.1rem' }}>
+                {scoreAverage === null ? 'Brak' : `${scoreAverage.toFixed(2)}/5`}
+              </strong>
+            </div>
+          </article>
+
+          <article className="cv-card" style={{ display: 'grid', gap: 10, padding: 20 }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 600 }}>🧩 Parametry oferty</h3>
+
+            <label style={{ display: 'grid', gap: 6 }}>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Seniority</span>
+              <select
+                className="cv-input cv-select"
+                value={currentApp.seniority}
+                onChange={(event) =>
+                  void patchApplication({ seniority: event.target.value as SeniorityLevel })
+                }
+              >
+                {Object.entries(SENIORITY_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label style={{ display: 'grid', gap: 6 }}>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Tryb pracy</span>
+              <select
+                className="cv-input cv-select"
+                value={currentApp.work_mode}
+                onChange={(event) =>
+                  void patchApplication({ work_mode: event.target.value as WorkMode })
+                }
+              >
+                {Object.entries(WORK_MODE_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
           </article>
 
           <AttachedRecruiters app={currentApp} />

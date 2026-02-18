@@ -8,7 +8,8 @@ import { useFiles } from '../../hooks/useFiles'
 import { useProfile } from '../../hooks/useProfile'
 import { resolveUploadFolderId, uploadFile } from '../../services/google/drive'
 import { useToastStore } from '../../store/toastStore'
-import type { ApplicationRecord, SheetRecord } from '../../types'
+import type { ApplicationRecord, SeniorityLevel, SheetRecord, WorkMode } from '../../types'
+import { SENIORITY_LABELS, WORK_MODE_LABELS } from '../../utils/constants'
 import { nowIsoDate, nowIsoDateTime } from '../../utils/dates'
 import { calculateHourlyRate } from '../../utils/salary'
 import { generateId } from '../../utils/uuid'
@@ -33,6 +34,8 @@ export function ApplicationForm({ open, editingApplication, onClose }: Applicati
   const [positionTitle, setPositionTitle] = useState('')
   const [positionUrl, setPositionUrl] = useState('')
   const [appliedDate, setAppliedDate] = useState(nowIsoDate())
+  const [seniority, setSeniority] = useState<SeniorityLevel>('unknown')
+  const [workMode, setWorkMode] = useState<WorkMode>('unknown')
   const [monthlySalary, setMonthlySalary] = useState<number | null>(null)
   const [offerFile, setOfferFile] = useState<File | null>(null)
   const [showCompanyResults, setShowCompanyResults] = useState(false)
@@ -68,6 +71,8 @@ export function ApplicationForm({ open, editingApplication, onClose }: Applicati
       setPositionTitle('')
       setPositionUrl('')
       setAppliedDate(nowIsoDate())
+      setSeniority('unknown')
+      setWorkMode('unknown')
       setMonthlySalary(null)
       setOfferFile(null)
       return
@@ -79,6 +84,8 @@ export function ApplicationForm({ open, editingApplication, onClose }: Applicati
     setPositionTitle(editingApplication.position_title)
     setPositionUrl(editingApplication.position_url)
     setAppliedDate(editingApplication.applied_date)
+    setSeniority(editingApplication.seniority)
+    setWorkMode(editingApplication.work_mode)
     setMonthlySalary(editingApplication.monthly_salary)
     setOfferFile(null)
   }, [companies, editingApplication])
@@ -195,6 +202,8 @@ export function ApplicationForm({ open, editingApplication, onClose }: Applicati
           position_title: positionTitle.trim(),
           position_url: positionUrl.trim(),
           applied_date: appliedDate,
+          seniority,
+          work_mode: workMode,
           monthly_salary: monthlySalary,
           hourly_rate: hourlyRate,
           job_offer_file_id: offerFileId,
@@ -210,6 +219,12 @@ export function ApplicationForm({ open, editingApplication, onClose }: Applicati
           status: 'sent',
           priority: 'normal',
           excitement_rating: 3,
+          offer_interest_rating: null,
+          location_rating: null,
+          company_rating: null,
+          fit_rating: null,
+          seniority,
+          work_mode: workMode,
           monthly_salary: monthlySalary,
           hourly_rate: hourlyRate,
           job_offer_file_id: offerFileId,
@@ -317,6 +332,32 @@ export function ApplicationForm({ open, editingApplication, onClose }: Applicati
           <input className="cv-input" placeholder="Link do ogłoszenia (opcjonalnie)" value={positionUrl} onChange={(event) => setPositionUrl(event.target.value)} />
 
           <input className="cv-input" type="date" value={appliedDate} onChange={(event) => setAppliedDate(event.target.value)} />
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <select
+              className="cv-input cv-select"
+              value={seniority}
+              onChange={(event) => setSeniority(event.target.value as SeniorityLevel)}
+            >
+              {Object.entries(SENIORITY_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+
+            <select
+              className="cv-input cv-select"
+              value={workMode}
+              onChange={(event) => setWorkMode(event.target.value as WorkMode)}
+            >
+              {Object.entries(WORK_MODE_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
 
           <input
             className="cv-input"

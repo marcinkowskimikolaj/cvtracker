@@ -12,7 +12,13 @@ interface RawApplicationRecord {
   position_url: string
   status: string
   priority: string
+  seniority: string
+  work_mode: string
   excitement_rating: string
+  offer_interest_rating: string
+  location_rating: string
+  company_rating: string
+  fit_rating: string
   monthly_salary: string
   hourly_rate: string
   job_offer_file_id: string
@@ -33,7 +39,13 @@ function toApplicationRecord(row: RawApplicationRecord): ApplicationRecord {
     position_url: row.position_url || '',
     status: (row.status || 'sent') as ApplicationRecord['status'],
     priority: (row.priority || 'normal') as ApplicationRecord['priority'],
+    seniority: (row.seniority || 'unknown') as ApplicationRecord['seniority'],
+    work_mode: (row.work_mode || 'unknown') as ApplicationRecord['work_mode'],
     excitement_rating: parseNumber(row.excitement_rating),
+    offer_interest_rating: parseNumber(row.offer_interest_rating),
+    location_rating: parseNumber(row.location_rating),
+    company_rating: parseNumber(row.company_rating),
+    fit_rating: parseNumber(row.fit_rating),
     monthly_salary: parseNumber(row.monthly_salary),
     hourly_rate: parseNumber(row.hourly_rate),
     job_offer_file_id: row.job_offer_file_id || '',
@@ -55,7 +67,13 @@ function toSheetRow(record: ApplicationRecord): Record<string, string> {
     position_url: record.position_url,
     status: record.status,
     priority: record.priority,
+    seniority: record.seniority,
+    work_mode: record.work_mode,
     excitement_rating: stringifyNumber(record.excitement_rating),
+    offer_interest_rating: stringifyNumber(record.offer_interest_rating),
+    location_rating: stringifyNumber(record.location_rating),
+    company_rating: stringifyNumber(record.company_rating),
+    fit_rating: stringifyNumber(record.fit_rating),
     monthly_salary: stringifyNumber(record.monthly_salary),
     hourly_rate: stringifyNumber(record.hourly_rate),
     job_offer_file_id: record.job_offer_file_id,

@@ -4,7 +4,9 @@ import type {
   FileType,
   Priority,
   ProfileId,
+  SeniorityLevel,
   StepType,
+  WorkMode,
 } from '../types'
 
 export const PROFILE_OPTIONS: Array<{ id: ProfileId; label: string }> = [
@@ -24,6 +26,23 @@ export const PRIORITY_LABELS: Record<Priority, string> = {
   normal: 'Normalny',
   high: 'Wysoki',
   promising: 'Rokujący',
+}
+
+export const SENIORITY_LABELS: Record<SeniorityLevel, string> = {
+  intern: 'Praktykant/Staż',
+  junior: 'Junior',
+  mid: 'Mid',
+  senior: 'Senior',
+  lead: 'Lead',
+  manager: 'Manager',
+  unknown: 'Nie określono',
+}
+
+export const WORK_MODE_LABELS: Record<WorkMode, string> = {
+  remote: 'Zdalna',
+  hybrid: 'Hybrydowa',
+  onsite: 'Stacjonarna',
+  unknown: 'Nie określono',
 }
 
 export const FILE_TYPE_LABELS: Record<FileType, string> = {
