@@ -858,7 +858,7 @@ export function ApplicationDetail({ appId }: ApplicationDetailProps) {
                   address={companyAddress}
                   mapsApiKey={mapsApiKey}
                   title={`Mapa firmy ${company.name}`}
-                  height={200}
+                  height={320}
                 />
 
                 <a
@@ -884,42 +884,6 @@ export function ApplicationDetail({ appId }: ApplicationDetailProps) {
               </>
             ) : (
               <p style={{ color: 'var(--text-secondary)' }}>Brak danych firmy.</p>
-            )}
-          </article>
-
-          <article className="cv-card" style={{ display: 'grid', gap: 10, padding: 20, textAlign: 'center' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 600, textAlign: 'left' }}>💰 Finanse</h3>
-
-            {!editingSalary ? (
-              <>
-                <p style={{ fontSize: '1.5rem', fontWeight: 700 }}>{formatMonthlySalary(currentApp.monthly_salary)}</p>
-                <p style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>/ miesiąc</p>
-                <div style={{ height: 1, background: 'var(--border-default)', margin: '6px 0' }} />
-                <p style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--accent)' }}>{formatHourlySalary(currentApp.hourly_rate)}</p>
-                <p style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>/ godzina</p>
-                <button className="cv-btn cv-btn-ghost" type="button" style={{ width: '100%' }} onClick={() => setEditingSalary(true)}>
-                  Edytuj
-                </button>
-              </>
-            ) : (
-              <div style={{ display: 'grid', gap: 8 }}>
-                <input
-                  className="cv-input"
-                  type="number"
-                  min={0}
-                  value={salaryDraft}
-                  onChange={(event) => setSalaryDraft(event.target.value)}
-                  placeholder="Kwota miesięczna PLN"
-                />
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button className="cv-btn cv-btn-primary" type="button" style={{ width: '100%' }} onClick={() => void handleSalarySave()}>
-                    Zapisz
-                  </button>
-                  <button className="cv-btn cv-btn-ghost" type="button" style={{ width: '100%' }} onClick={() => setEditingSalary(false)}>
-                    Anuluj
-                  </button>
-                </div>
-              </div>
             )}
           </article>
 
@@ -1012,6 +976,42 @@ export function ApplicationDetail({ appId }: ApplicationDetailProps) {
                 ))}
               </select>
             </label>
+          </article>
+
+          <article className="cv-card" style={{ display: 'grid', gap: 10, padding: 20, textAlign: 'center' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 600, textAlign: 'left' }}>💰 Finanse</h3>
+
+            {!editingSalary ? (
+              <>
+                <p style={{ fontSize: '1.5rem', fontWeight: 700 }}>{formatMonthlySalary(currentApp.monthly_salary)}</p>
+                <p style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>/ miesiąc</p>
+                <div style={{ height: 1, background: 'var(--border-default)', margin: '6px 0' }} />
+                <p style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--accent)' }}>{formatHourlySalary(currentApp.hourly_rate)}</p>
+                <p style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>/ godzina</p>
+                <button className="cv-btn cv-btn-ghost" type="button" style={{ width: '100%' }} onClick={() => setEditingSalary(true)}>
+                  Edytuj
+                </button>
+              </>
+            ) : (
+              <div style={{ display: 'grid', gap: 8 }}>
+                <input
+                  className="cv-input"
+                  type="number"
+                  min={0}
+                  value={salaryDraft}
+                  onChange={(event) => setSalaryDraft(event.target.value)}
+                  placeholder="Kwota miesięczna PLN"
+                />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="cv-btn cv-btn-primary" type="button" style={{ width: '100%' }} onClick={() => void handleSalarySave()}>
+                    Zapisz
+                  </button>
+                  <button className="cv-btn cv-btn-ghost" type="button" style={{ width: '100%' }} onClick={() => setEditingSalary(false)}>
+                    Anuluj
+                  </button>
+                </div>
+              </div>
+            )}
           </article>
 
           <AttachedRecruiters app={currentApp} />

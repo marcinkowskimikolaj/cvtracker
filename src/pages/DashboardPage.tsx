@@ -3,7 +3,6 @@ import { BarChart3, Clock3, MailCheck, Sparkles } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { ApplicationsOverTimeChart } from '../components/dashboard/ApplicationsOverTimeChart'
 import { AvgResponseTime } from '../components/dashboard/AvgResponseTime'
-import { ConversionFunnel } from '../components/dashboard/ConversionFunnel'
 import { CvEffectivenessChart } from '../components/dashboard/CvEffectivenessChart'
 import { StatsCards } from '../components/dashboard/StatsCards'
 import { StatusDistributionChart } from '../components/dashboard/StatusDistributionChart'
@@ -85,14 +84,6 @@ export function DashboardPage() {
     return rows
   }, [filteredApplications])
 
-  const funnel = useMemo(() => {
-    const sent = filteredApplications.length
-    const interview = filteredApplications.filter((application) => application.status === 'interview').length
-    const offer = filteredApplications.filter((application) => application.status === 'offer').length
-
-    return { sent, interview, offer }
-  }, [filteredApplications])
-
   const cvData = useMemo(() => {
     return cvEffectiveness.map((item) => {
       const usageCount = appFiles.filter((link) => link.file_id === item.fileId).length
@@ -163,46 +154,6 @@ export function DashboardPage() {
           <StatusDistributionChart data={statusData} />
           <AvgResponseTime avgDays={metrics.avgResponseDays} />
         </div>
-      </div>
-
-      <div className="cv-dashboard-bottom-grid">
-        <ConversionFunnel sent={funnel.sent} interview={funnel.interview} offer={funnel.offer} />
-
-        <section className="cv-card" style={{ display: 'grid', gap: 14 }}>
-          <h3 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Szybkie insighty</h3>
-
-          <div className="cv-card-nested" style={{ display: 'grid', gap: 6 }}>
-            <p style={{ fontSize: '0.8125rem', color: 'var(--text-tertiary)' }}>Najmocniejszy status</p>
-            <p style={{ fontWeight: 600 }}>{dominantStatus?.name || 'Brak danych'}</p>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-              Aktualnie {dominantStatus?.value ?? 0} rekordów jest w tym statusie.
-            </p>
-          </div>
-
-          <div className="cv-card-nested" style={{ display: 'grid', gap: 6 }}>
-            <p style={{ fontSize: '0.8125rem', color: 'var(--text-tertiary)' }}>Tempo odpowiedzi</p>
-            <p style={{ fontWeight: 600 }}>
-              {metrics.avgResponseDays <= 7 ? 'Bardzo dobre' : metrics.avgResponseDays <= 14 ? 'Stabilne' : 'Wymaga poprawy'}
-            </p>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-              Średnio {metrics.avgResponseDays} dni do odpowiedzi od pracodawcy.
-            </p>
-          </div>
-
-          <div className="cv-card-nested" style={{ display: 'grid', gap: 6 }}>
-            <p style={{ fontSize: '0.8125rem', color: 'var(--text-tertiary)' }}>Kierunek działania</p>
-            <p style={{ fontWeight: 600 }}>
-              {funnel.sent > 0 && funnel.interview === 0
-                ? 'Wzmocnij CV i follow-up'
-                : funnel.offer > 0
-                  ? 'Kontynuuj obecną strategię'
-                  : 'Utrzymaj rytm aplikowania'}
-            </p>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-              Aktualny lejek: {funnel.sent} wysłanych / {funnel.interview} rozmów / {funnel.offer} ofert.
-            </p>
-          </div>
-        </section>
       </div>
     </section>
   )

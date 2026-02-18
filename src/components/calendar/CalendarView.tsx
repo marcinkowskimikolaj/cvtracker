@@ -3,11 +3,13 @@ import { format, getDay, parse, startOfWeek } from 'date-fns'
 import { pl } from 'date-fns/locale'
 import { useMemo, useState } from 'react'
 import { Calendar as BigCalendar } from 'react-big-calendar'
+import { useNavigate } from 'react-router-dom'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 import { useApplications } from '../../hooks/useApplications'
 import { useCalendar } from '../../hooks/useCalendar'
+import { useCompanies } from '../../hooks/useCompanies'
 import type { CalendarEventRecord, EventType, SheetRecord } from '../../types'
-import { nowTimestamp } from '../../utils/dates'
+import { formatDate, nowIsoDate, nowTimestamp } from '../../utils/dates'
 import { EventForm } from './EventForm'
 import { EventModal } from './EventModal'
 import { SuggestedEvents } from './SuggestedEvents'
@@ -30,7 +32,8 @@ interface CalendarEventUi {
   start: Date
   end: Date
   type: EventType
-  source: 'calendar' | 'step'
+  source: 'calendar' | 'step' | 'application'
+  applicationId?: string
   original?: SheetRecord<CalendarEventRecord>
 }
 
@@ -68,12 +71,33 @@ function eventTypeFromStep(stepType: string): EventType {
 export function CalendarView() {
   const { calendarEvents, appSteps } = useCalendar()
   const { applications } = useApplications()
+  const { companies } = useCompanies()
+  const navigate = useNavigate()
 
   const [activeView, setActiveView] = useState<View>('month')
   const [selectedEvent, setSelectedEvent] = useState<SheetRecord<CalendarEventRecord> | null>(null)
   const [editingEvent, setEditingEvent] = useState<SheetRecord<CalendarEventRecord> | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [defaultDate, setDefaultDate] = useState<string | undefined>(undefined)
+  const todayDate = nowIsoDate()
+
+  const applicationsByDay = useMemo(() => {
+    const map = new Map<string, number>()
+
+    for (const application of applications) {
+      const key = application.applied_date
+      if (!key) {
+        continue
+      }
+      map.set(key, (map.get(key) || 0) + 1)
+    }
+
+    return [...map.entries()]
+      .map(([date, count]) => ({ date, count }))
+      .sort((left, right) => right.date.localeCompare(left.date))
+  }, [applications])
+
+  const todayApplicationsCount = applicationsByDay.find((entry) => entry.date === todayDate)?.count || 0
 
   const events = useMemo<CalendarEventUi[]>(() => {
     const currentTimestamp = nowTimestamp()
@@ -112,8 +136,26 @@ export function CalendarView() {
         }
       })
 
-    return [...calendarMapped, ...futureSteps]
-  }, [appSteps, applications, calendarEvents])
+    const appliedEvents = applications
+      .filter((application) => Boolean(application.applied_date))
+      .map((application) => {
+        const companyName = companies.find((item) => item.company_id === application.company_id)?.name || 'Firma'
+        const start = new Date(`${application.applied_date}T09:00:00`)
+        const end = new Date(`${application.applied_date}T09:30:00`)
+
+        return {
+          id: `application-${application.app_id}`,
+          title: `Aplikacja wysłana — ${companyName} — ${application.position_title}`,
+          start,
+          end,
+          type: 'other' as const,
+          source: 'application' as const,
+          applicationId: application.app_id,
+        }
+      })
+
+    return [...calendarMapped, ...futureSteps, ...appliedEvents]
+  }, [appSteps, applications, calendarEvents, companies])
 
   return (
     <section className="cv-card page-enter" style={{ display: 'grid', gap: 16 }}>
@@ -137,6 +179,28 @@ export function CalendarView() {
 
       <SuggestedEvents />
 
+      <section className="cv-card-nested" style={{ display: 'grid', gap: 10 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <h2 style={{ fontSize: '1rem', fontWeight: 600 }}>Aplikacje wysłane dziennie</h2>
+          <span className="cv-badge cv-badge-default">
+            Dzisiaj: {todayApplicationsCount}
+          </span>
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {applicationsByDay.length ? (
+            applicationsByDay.slice(0, 12).map((entry) => (
+              <span key={entry.date} className="cv-badge cv-badge-default">
+                {formatDate(entry.date)}: {entry.count}
+              </span>
+            ))
+          ) : (
+            <span style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+              Brak wysłanych aplikacji do pokazania.
+            </span>
+          )}
+        </div>
+      </section>
+
       <div className="cv-card-nested" style={{ padding: 16 }}>
         <BigCalendar
           localizer={localizer}
@@ -151,6 +215,11 @@ export function CalendarView() {
           onSelectEvent={(event: CalendarEventUi) => {
             if (event.source === 'calendar' && event.original) {
               setSelectedEvent(event.original)
+              return
+            }
+
+            if (event.source === 'application' && event.applicationId) {
+              navigate(`/aplikacje/${event.applicationId}`)
             }
           }}
           onSelectSlot={(slot: { start: Date }) => {

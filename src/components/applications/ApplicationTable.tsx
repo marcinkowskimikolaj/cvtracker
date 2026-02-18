@@ -1,4 +1,4 @@
-import { Eye } from 'lucide-react'
+import { Eye, Star } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { ApplicationRecord, CompanyRecord, SheetRecord } from '../../types'
@@ -17,10 +17,27 @@ type SortField =
   | 'position'
   | 'status'
   | 'priority'
+  | 'score'
   | 'applied_date'
   | 'monthly_salary'
   | 'hourly_rate'
   | 'waiting_days'
+
+function calculateScore(application: SheetRecord<ApplicationRecord>): number | null {
+  const ratings = [
+    application.offer_interest_rating,
+    application.location_rating,
+    application.company_rating,
+    application.fit_rating,
+  ].filter((value): value is number => value !== null)
+
+  if (!ratings.length) {
+    return application.excitement_rating ?? null
+  }
+
+  const score = ratings.reduce((sum, value) => sum + value, 0) / ratings.length
+  return Number(score.toFixed(2))
+}
 
 export function ApplicationTable({ applications, companies }: ApplicationTableProps) {
   const [sortField, setSortField] = useState<SortField>('applied_date')
@@ -53,6 +70,11 @@ export function ApplicationTable({ applications, companies }: ApplicationTablePr
           return left.status.localeCompare(right.status) * multiplier
         case 'priority':
           return left.priority.localeCompare(right.priority) * multiplier
+        case 'score': {
+          const leftScore = calculateScore(left) || 0
+          const rightScore = calculateScore(right) || 0
+          return (leftScore - rightScore) * multiplier
+        }
         case 'applied_date':
           return left.applied_date.localeCompare(right.applied_date) * multiplier
         case 'monthly_salary':
@@ -89,6 +111,11 @@ export function ApplicationTable({ applications, companies }: ApplicationTablePr
           <th>Status</th>
           <th>Priorytet</th>
           <th>
+            <button className="cv-btn cv-btn-ghost" type="button" onClick={() => toggleSort('score')}>
+              Scoring
+            </button>
+          </th>
+          <th>
             <button className="cv-btn cv-btn-ghost" type="button" onClick={() => toggleSort('applied_date')}>
               Data aplikacji
             </button>
@@ -103,6 +130,8 @@ export function ApplicationTable({ applications, companies }: ApplicationTablePr
         {sorted.map((application) => {
           const company = companies.find((item) => item.company_id === application.company_id)
           const waitingDays = daysBetween(application.applied_date, new Date().toISOString())
+          const score = calculateScore(application)
+          const roundedScore = score !== null ? Math.round(score) : 0
 
           return (
             <tr key={application.app_id}>
@@ -117,6 +146,25 @@ export function ApplicationTable({ applications, companies }: ApplicationTablePr
               </td>
               <td>
                 <PriorityIndicator priority={application.priority} />
+              </td>
+              <td>
+                {score !== null ? (
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ display: 'inline-flex', gap: 1 }}>
+                      {[1, 2, 3, 4, 5].map((value) => (
+                        <Star
+                          key={`${application.app_id}-score-${value}`}
+                          size={14}
+                          fill={roundedScore >= value ? 'var(--accent)' : 'transparent'}
+                          color={roundedScore >= value ? 'var(--accent)' : '#D1D5DB'}
+                        />
+                      ))}
+                    </span>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{score.toFixed(2)}</span>
+                  </div>
+                ) : (
+                  '-'
+                )}
               </td>
               <td>{formatDate(application.applied_date)}</td>
               <td>{application.monthly_salary ? `${application.monthly_salary} PLN` : '-'}</td>
