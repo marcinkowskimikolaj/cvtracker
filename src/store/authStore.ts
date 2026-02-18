@@ -1,7 +1,9 @@
 import { create } from 'zustand'
 import { APP_CONFIG } from '../config'
-import { fetchConfigValues } from '../services/data/configService'
+import { ensureProfileEmails, fetchConfigValues } from '../services/data/configService'
 import * as googleAuth from '../services/google/auth'
+import { useProfileStore } from './profileStore'
+import { useToastStore } from './toastStore'
 import type { AuthUser, ConfigValues } from '../types'
 
 const AUTH_SESSION_KEY = 'cvtracker_auth_session'
@@ -90,6 +92,32 @@ function isAllowedEmail(email: string): boolean {
   return APP_CONFIG.allowedEmails.includes(email as AllowedEmail)
 }
 
+async function loadConfigWithEnsure(accessToken: string): Promise<ConfigValues> {
+  try {
+    return await ensureProfileEmails(accessToken)
+  } catch (error) {
+    useToastStore.getState().push({
+      title:
+        error instanceof Error
+          ? `Nie udało się uzupełnić PROFILE_EMAIL_* w _Config: ${error.message}`
+          : 'Nie udało się uzupełnić PROFILE_EMAIL_* w _Config.',
+      variant: 'error',
+    })
+    return fetchConfigValues(accessToken)
+  }
+}
+
+function resolveAndSetProfile(userEmail: string, config: ConfigValues): void {
+  const resolution = useProfileStore.getState().resolveProfileFromEmail(userEmail, config)
+
+  if (resolution.usedFallback) {
+    useToastStore.getState().push({
+      title: 'Nie znaleziono dopasowania e-mail do profilu. Ustawiono domyślnie profil Mikołaj.',
+      variant: 'info',
+    })
+  }
+}
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   accessToken: null,
@@ -112,7 +140,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         throw new Error('Ten adres e-mail nie ma dostępu do aplikacji CV Tracker.')
       }
 
-      const config = await fetchConfigValues(session.accessToken)
+      const config = await loadConfigWithEnsure(session.accessToken)
       const tokenExpiresAt = Date.now() + Math.max(3600, session.expiresInSeconds) * 1000
 
       const user: AuthUser = {
@@ -120,6 +148,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         name: session.name,
         picture: session.picture,
       }
+
+      resolveAndSetProfile(user.email, config)
 
       saveStoredSession({
         user,
@@ -192,7 +222,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
 
     try {
-      const config = await fetchConfigValues(stored.accessToken)
+      const config = await loadConfigWithEnsure(stored.accessToken)
+      resolveAndSetProfile(stored.user.email, config)
 
       set({
         user: stored.user,
@@ -221,6 +252,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const token = get().accessToken
     googleAuth.logout(token ?? undefined)
     clearStoredSession()
+    useProfileStore.getState().clearProfileOverride()
     set({
       user: null,
       accessToken: null,
