@@ -158,7 +158,7 @@ function ApplicationDetailContent({
 
       <SalaryCalculator monthlySalary={app.monthly_salary} onMonthlySalaryChange={(value) => void updateSalary(value)} />
 
-      {company ? <CompanyMapSection company={company} /> : null}
+      {company ? <CompanyMapSection company={company} mapHeight={160} /> : null}
 
       <AttachedFiles app={app} />
       <AttachedRecruiters app={app} />

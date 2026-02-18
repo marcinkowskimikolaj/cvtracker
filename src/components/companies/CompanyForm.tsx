@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react'
-import { useAuth } from '../../hooks/useAuth'
 import { useCompanies } from '../../hooks/useCompanies'
 import { useProfile } from '../../hooks/useProfile'
-import { distance, geocode } from '../../services/google/maps'
 import { useToastStore } from '../../store/toastStore'
 import type { CompanyRecord, SheetRecord } from '../../types'
 import { nowIsoDateTime } from '../../utils/dates'
@@ -15,7 +13,6 @@ interface CompanyFormProps {
 }
 
 export function CompanyForm({ open, editingCompany, onClose }: CompanyFormProps) {
-  const { config } = useAuth()
   const { activeProfile } = useProfile()
   const { createCompany, updateCompany } = useCompanies()
   const pushToast = useToastStore((state) => state.push)
@@ -54,56 +51,6 @@ export function CompanyForm({ open, editingCompany, onClose }: CompanyFormProps)
     return null
   }
 
-  async function calculateDistance(addressValue: string): Promise<{ lat: number | null; lng: number | null; distanceKm: number | null; travelTimeMin: number | null }> {
-    const mapsApiKey = config.GOOGLE_MAPS_API_KEY
-
-    if (!mapsApiKey || !addressValue.trim()) {
-      return {
-        lat: null,
-        lng: null,
-        distanceKm: null,
-        travelTimeMin: null,
-      }
-    }
-
-    try {
-      const location = await geocode(addressValue, mapsApiKey)
-
-      const homeAddress =
-        activeProfile === 'mikolaj' ? config.HOME_ADDRESS_MIKOLAJ || '' : config.HOME_ADDRESS_EMILKA || ''
-
-      if (!homeAddress) {
-        return {
-          lat: location.lat,
-          lng: location.lng,
-          distanceKm: null,
-          travelTimeMin: null,
-        }
-      }
-
-      const distanceInfo = await distance(homeAddress, addressValue, mapsApiKey)
-
-      return {
-        lat: location.lat,
-        lng: location.lng,
-        distanceKm: distanceInfo.distanceKm,
-        travelTimeMin: distanceInfo.travelTimeMin,
-      }
-    } catch (error) {
-      pushToast({
-        title: error instanceof Error ? error.message : 'Nie udało się obliczyć odległości firmy.',
-        variant: 'error',
-      })
-
-      return {
-        lat: null,
-        lng: null,
-        distanceKm: null,
-        travelTimeMin: null,
-      }
-    }
-  }
-
   async function handleSave(): Promise<void> {
     if (!name.trim()) {
       pushToast({ title: 'Nazwa firmy jest wymagana.', variant: 'error' })
@@ -113,8 +60,6 @@ export function CompanyForm({ open, editingCompany, onClose }: CompanyFormProps)
     setIsSubmitting(true)
 
     try {
-      const distanceData = await calculateDistance(address.trim())
-
       if (editingCompany) {
         await updateCompany({
           ...editingCompany,
@@ -124,10 +69,10 @@ export function CompanyForm({ open, editingCompany, onClose }: CompanyFormProps)
           careers_url: careersUrl.trim(),
           linkedin_url: linkedinUrl.trim(),
           address: address.trim(),
-          lat: distanceData.lat,
-          lng: distanceData.lng,
-          distance_km: distanceData.distanceKm,
-          travel_time_min: distanceData.travelTimeMin,
+          lat: null,
+          lng: null,
+          distance_km: null,
+          travel_time_min: null,
           notes: notes.trim(),
         })
       } else {
@@ -140,10 +85,10 @@ export function CompanyForm({ open, editingCompany, onClose }: CompanyFormProps)
           careers_url: careersUrl.trim(),
           linkedin_url: linkedinUrl.trim(),
           address: address.trim(),
-          lat: distanceData.lat,
-          lng: distanceData.lng,
-          distance_km: distanceData.distanceKm,
-          travel_time_min: distanceData.travelTimeMin,
+          lat: null,
+          lng: null,
+          distance_km: null,
+          travel_time_min: null,
           notes: notes.trim(),
           created_at: nowIsoDateTime(),
         })

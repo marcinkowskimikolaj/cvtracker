@@ -1,23 +1,31 @@
 interface MapEmbedProps {
-  lat: number | null
-  lng: number | null
+  address: string
+  mapsApiKey: string
   title: string
-  height?: 'map-sm' | 'map-md'
+  height?: number
 }
 
-export function MapEmbed({ lat, lng, title, height = 'map-md' }: MapEmbedProps) {
-  if (lat === null || lng === null) {
+export function MapEmbed({ address, mapsApiKey, title, height = 240 }: MapEmbedProps) {
+  if (!address.trim()) {
     return (
-      <div className="cv-map-container" style={{ height: height === 'map-sm' ? 160 : 200, display: 'grid', placeItems: 'center' }}>
-        <p style={{ color: 'var(--text-tertiary)' }}>Brak współrzędnych mapy.</p>
+      <div className="cv-map-container" style={{ height, display: 'grid', placeItems: 'center' }}>
+        <p style={{ color: 'var(--text-tertiary)' }}>Dodaj adres firmy, aby wyświetlić mapę.</p>
       </div>
     )
   }
 
-  const src = `https://maps.google.com/maps?q=${lat},${lng}&z=14&output=embed`
+  if (!mapsApiKey.trim()) {
+    return (
+      <div className="cv-map-container" style={{ height, display: 'grid', placeItems: 'center' }}>
+        <p style={{ color: 'var(--text-tertiary)' }}>Brak GOOGLE_MAPS_API_KEY w _Config.</p>
+      </div>
+    )
+  }
+
+  const src = `https://www.google.com/maps/embed/v1/place?key=${encodeURIComponent(mapsApiKey)}&q=${encodeURIComponent(address)}`
 
   return (
-    <div className="cv-map-container" style={{ height: height === 'map-sm' ? 160 : 200 }}>
+    <div className="cv-map-container" style={{ height }}>
       <iframe title={title} src={src} />
     </div>
   )
